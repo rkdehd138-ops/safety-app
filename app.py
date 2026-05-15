@@ -35,12 +35,27 @@ if loc:
 
 st.divider()
 
-# [2] 가장 안정적인 기본 카메라 설정
+# [2] 카메라 전환 기능 구현
 st.subheader("📸 QR 스캔 / 카메라")
-st.write("카메라 화면이 나오면 QR 코드를 비추어 주세요.")
 
-# 에러 유발 옵션을 모두 제거한 기본 호출입니다.
-image = camera_input_live()
+# 카메라 모드 상태 저장 (기본값은 후면 'environment')
+if 'camera_mode' not in st.session_state:
+    st.session_state.camera_mode = "environment"
+
+# 전환 버튼
+if st.button("🔄 카메라 전/후면 전환"):
+    if st.session_state.camera_mode == "environment":
+        st.session_state.camera_mode = "user" # 전면으로 변경
+    else:
+        st.session_state.camera_mode = "environment" # 후면으로 변경
+    st.rerun() # 앱 재실행하여 카메라 모드 적용
+
+st.write(f"현재 설정: {'후면(외측)' if st.session_state.camera_mode == 'environment' else '전면(내측)'} 카메라")
+
+# 카메라 실행 (에러 방지를 위해 최소한의 설정만 사용)
+image = camera_input_live(
+    constraints={"video": {"facingMode": st.session_state.camera_mode}}
+)
 
 if image:
     st.image(image, caption="스캔된 화면", use_container_width=True)
