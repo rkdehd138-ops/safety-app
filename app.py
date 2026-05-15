@@ -1,6 +1,5 @@
 import streamlit as st
 from streamlit_js_eval import get_geolocation
-from camera_input_live import camera_input_live
 
 st.set_page_config(page_title="공장 안전 가이드", layout="centered")
 
@@ -35,27 +34,13 @@ if loc:
 
 st.divider()
 
-# [2] 카메라 전환 기능 구현
-st.subheader("📸 QR 스캔 / 카메라")
+# [2] 공식 안정 버전 카메라 (전환 버튼 내장)
+st.subheader("📸 QR 스캔 / 장비 촬영")
+st.write("카메라가 켜지면 촬영 버튼을 눌러주세요.")
 
-# 카메라 모드 상태 저장 (기본값은 후면 'environment')
-if 'camera_mode' not in st.session_state:
-    st.session_state.camera_mode = "environment"
+# 이 기능은 Streamlit 공식 기능으로, 브라우저가 제공하는 전환 버튼이 자동으로 뜹니다.
+img_file = st.camera_input("카메라 촬영")
 
-# 전환 버튼
-if st.button("🔄 카메라 전/후면 전환"):
-    if st.session_state.camera_mode == "environment":
-        st.session_state.camera_mode = "user" # 전면으로 변경
-    else:
-        st.session_state.camera_mode = "environment" # 후면으로 변경
-    st.rerun() # 앱 재실행하여 카메라 모드 적용
-
-st.write(f"현재 설정: {'후면(외측)' if st.session_state.camera_mode == 'environment' else '전면(내측)'} 카메라")
-
-# 카메라 실행 (에러 방지를 위해 최소한의 설정만 사용)
-image = camera_input_live(
-    constraints={"video": {"facingMode": st.session_state.camera_mode}}
-)
-
-if image:
-    st.image(image, caption="스캔된 화면", use_container_width=True)
+if img_file:
+    st.image(img_file, caption="촬영된 이미지", use_container_width=True)
+    st.success("사진이 정상적으로 캡처되었습니다.")
