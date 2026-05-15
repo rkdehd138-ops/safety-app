@@ -16,7 +16,7 @@ AREAS = [
 
 st.title("🏭 화학공장 안전관리 웹")
 
-# [1] 위치 정보
+# [1] 위치 정보 확인 부분
 loc = get_geolocation()
 if loc:
     curr_lat = loc['coords']['latitude']
@@ -35,13 +35,14 @@ if loc:
 
 st.divider()
 
-# [2] 후면 카메라 설정 적용
+# [2] 후면 카메라 설정 (호환성 개선 버전)
 st.subheader("📸 QR 스캔 (후면 카메라)")
+st.write("카메라 화면이 나오지 않으면 '허용'을 눌러주세요.")
+
+# 에러를 방지하기 위해 가장 기본적인 후면 설정만 적용합니다.
 image = camera_input_live(
-    constraints={
-        "video": {"facingMode": "environment"},
-        "audio": False
-    }
+    show_controls=False,
+    constraints={"video": {"facingMode": "environment"}}
 )
 
 if image:
