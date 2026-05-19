@@ -1,9 +1,9 @@
 import streamlit as st
 from streamlit_js_eval import get_geolocation
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
-import hashlib
+import time
 
 # [1] 웹페이지 기본 설정
 st.set_page_config(page_title="공장 안전 가이드", layout="centered")
@@ -35,13 +35,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- [🔒 암호학 자격 증명 데이터 설정 - 직관적 검증으로 변경] ---
-# 마스터 비밀번호를 직접 선언하고 앞뒤 공백을 차단합니다.
+# --- [🔒 암호학 자격 증명 데이터 설정] ---
 ADMIN_PASSWORD_PLAIN = "admin1234"
 
 def verify_password(input_password):
     """입력받은 패스워드의 앞뒤 공백을 제거하고 마스터 비밀번호와 직접 대조합니다."""
-    # 사용자가 입력한 값과 마스터 비밀번호의 앞뒤 공백을 지우고 비교하여 에러를 원천 차단
     return input_password.strip() == ADMIN_PASSWORD_PLAIN.strip()
 
 # --- [화학물질 데이터베이스 (총 9종)] ---
@@ -57,13 +55,46 @@ CHEMICALS = {
     "ACRYLONITRILE": {"name": "아크릴로니트릴", "cas_no": "107-13-1", "symbol": "🔥 고인화성 / 💀 고독성", "danger": "• 체내에서 시안화물로 분해되어 극히 유독", "emergency": "1. 송기마스크 착용 후 환자 대피"}
 }
 
-# --- [데이터 저장 파일 생성] ---
+# --- [데이터 저장 파일 생성 및 컬럼 정의] ---
 DB_LOG = "inspection_log.csv"
 DB_SOS = "sos_log.csv"
+LOG_COLS = ["일시", "점검자", "점검물질", "상태", "특이사항"]
+SOS_COLS = ["일시", "위치_위도", "위치_경도", "상태"]
 
-for f, cols in [(DB_LOG, ["일시", "점검자", "점검물질", "상태", "특이사항"]), (DB_SOS, ["일시", "위치_위도", "위치_경도", "상태"])]:
-    if not os.path.exists(f):
-        pd.DataFrame(columns=cols).to_csv(f, index=False, encoding="utf-8-sig")
+def init_databases(force=False):
+    """데이터베이스 파일을 초기화합니다. force가 True이면 무조건 새로 만듭니다."""
+    if force or not os.path.exists(DB_LOG):
+        pd.DataFrame(columns=LOG_COLS).to_csv(DB_LOG, index=False, encoding="utf-8-sig")
+    if force or not os.path.exists(DB_SOS):
+        pd.DataFrame(columns=SOS_COLS).to_csv(DB_SOS, index=False, encoding="utf-8-sig")
+
+init_databases()
+
+# =========================================================================
+# ⏰ [한국 시간 기준 오전 7시 정각 자동 리셋 시스템]
+# =========================================================================
+# 스트림릿 클라우드 서버 시간(UTC)을 한국 시간(KST = UTC + 9시간)으로 변환
+now_utc = datetime.utcnow()
+now_kst = now_utc + timedelta(hours=9)
+
+# 오늘 아침 7시 정각 기준점 계산
+today_reset_time = now_kst.replace(hour=7, minute=0, second=0, microsecond=0)
+
+# 만약 현재 시간이 오늘 아침 7시 이전이라면, '이전 리셋' 기준점은 '어제 아침 7시'가 됩니다.
+if now_kst < today_reset_time:
+    last_reset_target = today_reset_time - timedelta(days=1)
+else:
+    last_reset_target = today_reset_time
+
+# 세션 상태에 마지막으로 리셋이 수행된 날짜 기록 변수 생성
+if "last_auto_reset_date" not in st.session_state:
+    st.session_state["last_auto_reset_date"] = None
+
+# 현재 계산된 리셋 목표일과 세션에 기록된 마지막 리셋 날짜를 비교하여 자동 초기화 수행
+if st.session_state["last_auto_reset_date"] != last_reset_target.date():
+    init_databases(force=True)  # CSV 파일 내용 전체 초기화
+    st.session_state["last_auto_reset_date"] = last_reset_target.date()
+    st.toast("⏰ 오전 7시 정각 데이터 자동 초기화가 완료되었습니다.", icon="🔄")
 
 # --- [주소 분석 및 네비게이션 제어] ---
 qr_chem = st.query_params.get("chem", None)
@@ -108,8 +139,8 @@ if user_role == "👷 현장 작업자 모드":
         lat = loc['coords']['latitude'] if loc else 35.5416
         lon = loc['coords']['longitude'] if loc else 129.2555
         
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        new_sos = pd.DataFrame([[now_str, lat, lon, "🚨 미조치 긴급상황"]], columns=["일시", "위치_위도", "위치_경도", "상태"])
+        now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
+        new_sos = pd.DataFrame([[now_str, lat, lon, "🚨 미조치 긴급상황"]], columns=SOS_COLS)
         
         sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
         pd.concat([sos_df, new_sos], ignore_index=True).to_csv(DB_SOS, index=False, encoding="utf-8-sig")
@@ -167,41 +198,76 @@ if user_role == "👷 현장 작업자 모드":
                 submit_btn = st.form_submit_button("📁 점검 일지 시스템 전송")
                 
                 if submit_btn and inspector:
-                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    new_log = pd.DataFrame([[now_str, inspector, chem_data['name'], status, note]], columns=["일시", "점검자", "점검물질", "상태", "특이사항"])
+                    now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
+                    new_log = pd.DataFrame([[now_str, inspector, chem_data['name'], status, note]], columns=LOG_COLS)
                     log_df = pd.read_csv(DB_LOG, encoding="utf-8-sig")
                     pd.concat([log_df, new_log], ignore_index=True).to_csv(DB_LOG, index=False, encoding="utf-8-sig")
                     st.success("📥 점검 결과가 종합방재실 서버 데이터베이스로 즉시 전송되었습니다!")
 
 # =========================================================================
-# [권한 2] 종합 방재실 관제 센터 모드 (비밀번호 안정성 검증 강화)
+# [권한 2] 종합 방재실 관제 센터 모드 (⏱️ 세션 유지 및 🔄 수동 리셋 제어 패널)
 # =========================================================================
 else:
     st.title("🖥️ 종합 방재실 안전관제 대시보드")
     
+    # 세션 시간 제어 초기화
     if "admin_authenticated" not in st.session_state:
         st.session_state["admin_authenticated"] = False
-        
+    if "login_time" not in st.session_state:
+        st.session_state["login_time"] = None
+
+    SESSION_TIMEOUT = timedelta(minutes=10)
+
+    if st.session_state["admin_authenticated"] and st.session_state["login_time"] is not None:
+        elapsed_time = datetime.now() - st.session_state["login_time"]
+        if elapsed_time > SESSION_TIMEOUT:
+            st.session_state["admin_authenticated"] = False
+            st.session_state["login_time"] = None
+            st.error("⏳ 보안 지침에 따라 관리자 세션이 만료되어 자동 로그아웃 및 리셋되었습니다. 다시 인증해 주세요.")
+            time.sleep(1)
+            st.rerun()
+
     if not st.session_state["admin_authenticated"]:
         st.warning("🔒 본 화면은 인가된 방재실 관리자만 접근할 수 있는 국가 중요 보안 시설 관제창입니다.")
+        st.info("⏱️ 본 관제 시스템은 최고 보안 등급 유지를 위해 [10분 후 자동 세션 리셋]이 작동합니다.")
         
         with st.form("admin_auth_form"):
-            passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password", help="마스터 비밀번호 매칭을 통해 관리자 권한을 획득합니다.")
+            passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password")
             auth_submit = st.form_submit_button("🔑 관제 센터 시스템 기동")
             
             if auth_submit:
                 if verify_password(passwd_input):
                     st.session_state["admin_authenticated"] = True
+                    st.session_state["login_time"] = datetime.now()
                     st.success("🔓 자격 증명 성공! 방재실 관제 권한이 획득되었습니다.")
                     st.rerun()
                 else:
                     st.error("❌ 자격 증명 실패: 비밀번호가 일치하지 않거나 권한이 거부되었습니다.")
                     
     else:
-        st.success("🟢 통제 권한 인증 상태: 방재실 최고 관리자 자격 활성화됨")
-        if st.button("🔒 안전 로그아웃"):
-            st.session_state["admin_authenticated"] = False
-            st.rerun()
+        time_left = SESSION_TIMEOUT - (datetime.now() - st.session_state["login_time"])
+        minutes_left = int(time_left.total_seconds() // 60)
+        seconds_left = int(time_left.total_seconds() % 60)
+        
+        # 최상단 네비게이션 및 제어 레이아웃 구축
+        col_status, col_reset, col_logout = st.columns([2, 1, 1])
+        
+        with col_status:
+            st.success(f"🟢 보안 리셋까지 남은 시간: {minutes_left}분 {seconds_left}초")
+            
+        with col_reset:
+            # 🔄 [수동 리셋 마스터 버튼 생성]
+            if st.button("🔄 전체 데이터 즉시 리셋", help="클릭 시 현장 점검 일지와 SOS 로그를 전부 비워 초기화합니다."):
+                init_databases(force=True)  # CSV 파일 강제 포맷
+                st.warning("데이터베이스가 수동 초기화되었습니다.")
+                time.sleep(1)
+                st.rerun()
+                
+        with col_logout:
+            if st.button("🔒 즉시 안전 로그아웃"):
+                st.session_state["admin_authenticated"] = False
+                st.session_state["login_time"] = None
+                st.rerun()
             
         st.divider()
         
@@ -230,6 +296,6 @@ else:
         st.subheader("📋 현장 작업자 실시간 점검 기록 DB")
         current_logs = pd.read_csv(DB_LOG, encoding="utf-8-sig")
         if current_logs.empty:
-            st.info("아직 제출된 현장 안전 점검 일지가 없습니다.")
+            st.info("아직 제출된 현장 안전 점검 일지가 없습니다. (오전 7시 초기화 완료 상태)")
         else:
             st.dataframe(current_logs.sort_values(by="일시", ascending=False), use_container_width=True)
