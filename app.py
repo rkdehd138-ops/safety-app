@@ -7,7 +7,7 @@ import os
 # [1] 웹페이지 기본 설정
 st.set_page_config(page_title="공장 안전 가이드", layout="centered")
 
-# --- [🎨 세련된 대시보드 및 경보 테마 CSS 적용] ---
+# --- [🎨 세련된 대시보드 및 네비게이션 테마 CSS 적용] ---
 st.markdown("""
     <style>
     .stApp { background-color: #f8f9fa; color: #333333; font-family: 'Noto Sans KR', sans-serif; }
@@ -25,6 +25,12 @@ st.markdown("""
     /* 🚨 실시간 사이렌 애니메이션 효과 */
     .siren-alert { background-color: #fef2f2; border: 2px solid #ef4444; padding: 15px; border-radius: 12px; animation: blink 1.5s infinite; color: #b91c1c; font-weight: bold; margin-bottom: 20px; }
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    
+    /* 🔧 라디오 버튼을 탭 버튼 스타일로 튜닝 */
+    div[data-testid="stRadio"] p { display: none; } /* 메뉴 글씨 숨기기 */
+    div[data-testid="stRadio"] div[role="radiogroup"] { gap: 10px; }
+    div[data-testid="stRadio"] label { background-color: #ffffff; border: 1px solid #e5e7eb; padding: 12px 24px; border-radius: 8px; font-weight: 600; color: #4b5563; cursor: pointer; }
+    div[data-testid="stRadio"] label[data-checked="true"] { background-color: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -49,22 +55,20 @@ for f, cols in [(DB_LOG, ["일시", "점검자", "점검물질", "상태", "특�
     if not os.path.exists(f):
         pd.DataFrame(columns=cols).to_csv(f, index=False, encoding="utf-8-sig")
 
-# --- [🔧 핵심 수정 부분: 최신 Streamlit 주소 문자열 추출 로직] ---
+# --- [🔧 핵심 수정 부분: 최신 Streamlit 주소 분석 및 페이지 강제 전환] ---
 qr_chem = st.query_params.get("chem", None)
 chem_list = list(CHEMICALS.keys())
 
-# 만약 리스트 형태로 리턴될 경우를 대비해 첫 번째 값 추출
 if isinstance(qr_chem, list) and len(qr_chem) > 0:
     qr_chem = qr_chem[0]
 
-# 대문자 변환 및 공백 제거로 매칭 정확도 향상
 if qr_chem:
     qr_chem = str(qr_chem).strip().upper()
 
-# 어떤 탭 인덱스를 먼저 열어줄지 결정
-init_tab = 0
+# 어떤 메뉴 인덱스를 열어줄지 변수로 완전 통제
+init_menu_idx = 0
 if qr_chem and qr_chem in CHEMICALS:
-    init_tab = 1  # 1번 탭(화학물질 QR 자료실)을 강제로 첫 화면으로 설정
+    init_menu_idx = 1  # QR코드가 유효하면 무조건 1번(자료실) 화면이 첫 화면이 됨!
 
 # --- [상단 대시보드 영역 데이터 로드] ---
 log_df = pd.read_csv(DB_LOG, encoding="utf-8-sig")
@@ -100,11 +104,14 @@ if user_role == "👷 현장 작업자 모드":
     
     st.divider()
     
-    # 🔧 init_tab 변수를 활용하여 자동으로 탭이 열리도록 고정
-    menu_tabs = st.tabs(["📍 실시간 위치 지침", "📚 화학물질 QR 자료실"])
+    # 🔧 st.tabs 대신 주소 명령어로 완벽 제어 가능한 가로형 라디오 메뉴 도입!
+    menu_options = ["📍 실시간 위치 지침", "📚 화학물질 QR 자료실"]
+    selected_menu = st.radio("메뉴선택", menu_options, index=init_menu_idx, horizontal=True)
     
-    # 탭 1: 위치 가이드
-    with menu_tabs[0]:
+    st.write("") # 간격 조절
+
+    # 화면 1: 위치 가이드
+    if selected_menu == "📍 실시간 위치 지침":
         st.subheader("현재 내 위치 정보")
         loc = get_geolocation()
         if loc:
@@ -119,8 +126,8 @@ if user_role == "👷 현장 작업자 모드":
         img_file = st.camera_input("카메라 구동")
         if img_file: st.success("✨ 사진이 임시 저장되었습니다.")
 
-    # 탭 2: 화학물질 자료실
-    with menu_tabs[1]:
+    # 화면 2: 화학물질 자료실 (QR 접속 시 이리로 바로 강제 직행!)
+    elif selected_menu == "📚 화학물질 QR 자료실":
         st.subheader("📋 공장 취급 화학물질 정보")
         chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
         
