@@ -1,77 +1,23 @@
 import streamlit as st
 from streamlit_js_eval import get_geolocation
 
-# [1] 웹페이지 기본 설정 및 타이틀 지정
+# [1] 웹페이지 기본 설정
 st.set_page_config(page_title="공장 안전 가이드", layout="centered")
 
 # --- [🎨 대중적이고 깔끔한 라이트 테마 CSS 적용] ---
 st.markdown("""
     <style>
-    /* 전체 배경색 및 폰트 설정 */
-    .stApp {
-        background-color: #f8f9fa;
-        color: #333333;
-        font-family: 'Noto Sans KR', sans-serif;
-    }
-    
-    /* 메인 타이틀 디자인 */
-    h1 {
-        color: #1e3a8a !important;
-        font-weight: 700;
-        padding-bottom: 10px;
-        border-bottom: 3px solid #3b82f6;
-        margin-bottom: 25px !important;
-    }
-    
-    /* 탭 메뉴 디자인 깔끔하게 바꾸기 */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #ffffff;
-        border: 1px solid #e5e7eb;
-        padding: 10px 20px;
-        border-radius: 8px 8px 0px 0px;
-        font-weight: 600;
-        color: #4b5563;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #3b82f6 !important;
-        color: white !important;
-        border-color: #3b82f6 !important;
-    }
-    
-    /* 카메라 촬영 버튼 등 일반 버튼 디자인 */
-    .stButton>button {
-        width: 100%;
-        background-color: #3b82f6;
-        color: white;
-        border: none;
-        padding: 12px;
-        border-radius: 8px;
-        font-weight: bold;
-        transition: all 0.3s ease;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
-    }
-    .stButton>button:hover {
-        background-color: #1d4ed8;
-        color: white;
-    }
-    
-    /* 셀렉트 박스 테두리 둥글게 */
-    div[data-baseweb="select"] {
-        border-radius: 8px !important;
-    }
-    
-    /* 경고창이나 안내창 모서리 다듬기 */
-    .stAlert {
-        border-radius: 8px !important;
-        border: none !important;
-        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.02);
-    }
+    .stApp { background-color: #f8f9fa; color: #333333; font-family: 'Noto Sans KR', sans-serif; }
+    h1 { color: #1e3a8a !important; font-weight: 700; padding-bottom: 10px; border-bottom: 3px solid #3b82f6; margin-bottom: 25px !important; }
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background-color: #ffffff; border: 1px solid #e5e7eb; padding: 10px 20px; border-radius: 8px 8px 0px 0px; font-weight: 600; color: #4b5563; }
+    .stTabs [aria-selected="true"] { background-color: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; }
+    .stButton>button { width: 100%; background-color: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; transition: all 0.3s ease; box-shadow: 0px 2px 4px rgba(0,0,0,0.05); }
+    .stButton>button:hover { background-color: #1d4ed8; color: white; }
+    div[data-baseweb="select"] { border-radius: 8px !important; }
+    .stAlert { border-radius: 8px !important; border: none !important; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.02); }
     </style>
     """, unsafe_allow_html=True)
-
 
 # --- [관리자 설정: 안전 구역 좌표 데이터] ---
 AREAS = [
@@ -85,7 +31,6 @@ AREAS = [
 
 # --- [관리자 설정: 화학물질 자료실 데이터 (총 9종)] ---
 CHEMICALS = {
-    # 1. 기존 문서 기반 물질 4종
     "TOLUENE": {
         "name": "톨루엔 (Toluene)",
         "cas_no": "108-88-3",
@@ -114,8 +59,6 @@ CHEMICALS = {
         "danger": "• 금속을 부식시킬 수 있으며 삼키거나 피부 접촉 시 유해함\n• 피부, 피부하선 및 눈에 심한 손상 (화학적 화상)\n• 흡입 및 분진 위험, 실명 위험",
         "emergency": "1. 피부에 닿았을 때 미끈거리는 느낌이 완전히 사라질 때까지 흐르는 물에 세척\n2. 신선한 공기가 있는 곳으로 옮기고, 호흡이 곤란하면 산소를 공급"
     },
-    
-    # 2. 추가 요청 석유화학단지 주요 물질 5종
     "BENZENE": {
         "name": "벤젠 (Benzene)",
         "cas_no": "71-43-2",
@@ -153,10 +96,18 @@ CHEMICALS = {
     }
 }
 
+# --- [🆕 QR 주소 인식 파트] ---
+# 주소창의 ?chem=값 을 가져옵니다.
+query_params = st.query_params
+qr_chem = query_params.get("chem", None)
+
+# QR 접속 시 자료실 탭이 기본으로 먼저 열리도록 인덱스 설정
+default_tab = 1 if qr_chem and qr_chem in CHEMICALS else 0
+
 # --- [웹 화면 구현 시작] ---
 st.title("🏭 스마트 안전관리 모바일 가이드")
 
-# 탭 메뉴 구성 (디자인이 적용된 상단 탭)
+# 기본 선택 탭 지정
 tab1, tab2 = st.tabs(["📍 실시간 위치 지침", "📚 화학물질 자료실"])
 
 # --- [탭 1: 위치 확인 및 카메라 기능] ---
@@ -192,16 +143,23 @@ with tab1:
 # --- [탭 2: 화학물질 자료실 메뉴] ---
 with tab2:
     st.subheader("📋 공장 취급 화학물질 정보")
-    st.write("안전 데이터 확인이 필요한 화학물질을 선택하세요.")
     
     chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
-    selected_name = st.selectbox("🔍 화학물질 검색/선택", list(chem_options.keys()))
+    
+    # 🆕 QR코드로 들어온 경우 해당 물질을 기본값으로 선택, 아니면 리스트 첫 번째 선택
+    default_index = 0
+    if qr_chem and qr_chem in CHEMICALS:
+        default_index = list(chem_options.values()).index(qr_chem)
+        st.success(f"🔍 QR 코드가 인식되었습니다: {CHEMICALS[qr_chem]['name']}")
+    else:
+        st.write("안전 데이터 확인이 필요한 화학물질을 선택하세요.")
+        
+    selected_name = st.selectbox("🔍 화학물질 검색/선택", list(chem_options.keys()), index=default_index)
     
     if selected_name:
         chem_key = chem_options[selected_name]
         chem_data = CHEMICALS[chem_key]
         
-        # 카드 형태로 깔끔하게 정보 노출
         st.markdown(f"## **{chem_data['name']}**")
         st.caption(f"🔗 **CAS No.** {chem_data['cas_no']}")
         st.error(f"⚠️ **분류 및 기호:** {chem_data['symbol']}")
