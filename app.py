@@ -35,15 +35,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- [🔒 암호학 자격 증명 데이터 설정] ---
-# 마스터 비밀번호 'admin1234'의 SHA-256 해시값입니다.
-ADMIN_PASSWORD_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+# --- [🔒 암호학 자격 증명 데이터 설정 - 직관적 검증으로 변경] ---
+# 마스터 비밀번호를 직접 선언하고 앞뒤 공백을 차단합니다.
+ADMIN_PASSWORD_PLAIN = "admin1234"
 
 def verify_password(input_password):
-    """입력받은 패스워드의 앞뒤 공백을 제거하고 해시화하여 마스터 해시값과 비교 검증합니다."""
-    # 사용자가 입력한 값의 앞뒤 공백을 .strip()으로 완벽하게 제거 후 해시화
-    hashed_input = hashlib.sha256(input_password.strip().encode()).hexdigest()
-    return hashed_input.strip() == ADMIN_PASSWORD_HASH.strip()
+    """입력받은 패스워드의 앞뒤 공백을 제거하고 마스터 비밀번호와 직접 대조합니다."""
+    # 사용자가 입력한 값과 마스터 비밀번호의 앞뒤 공백을 지우고 비교하여 에러를 원천 차단
+    return input_password.strip() == ADMIN_PASSWORD_PLAIN.strip()
 
 # --- [화학물질 데이터베이스 (총 9종)] ---
 CHEMICALS = {
@@ -175,7 +174,7 @@ if user_role == "👷 현장 작업자 모드":
                     st.success("📥 점검 결과가 종합방재실 서버 데이터베이스로 즉시 전송되었습니다!")
 
 # =========================================================================
-# [권한 2] 종합 방재실 관제 센터 모드 (🔒 SHA-256 공공백 제거 디펜스 반영)
+# [권한 2] 종합 방재실 관제 센터 모드 (비밀번호 안정성 검증 강화)
 # =========================================================================
 else:
     st.title("🖥️ 종합 방재실 안전관제 대시보드")
@@ -187,13 +186,13 @@ else:
         st.warning("🔒 본 화면은 인가된 방재실 관리자만 접근할 수 있는 국가 중요 보안 시설 관제창입니다.")
         
         with st.form("admin_auth_form"):
-            passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password", help="SHA-256 보안 해시 레이어가 적용되어 보호됩니다.")
+            passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password", help="마스터 비밀번호 매칭을 통해 관리자 권한을 획득합니다.")
             auth_submit = st.form_submit_button("🔑 관제 센터 시스템 기동")
             
             if auth_submit:
                 if verify_password(passwd_input):
                     st.session_state["admin_authenticated"] = True
-                    st.success("🔓 암호학 자격 증명 성공! 방재실 관제 권한이 획득되었습니다.")
+                    st.success("🔓 자격 증명 성공! 방재실 관제 권한이 획득되었습니다.")
                     st.rerun()
                 else:
                     st.error("❌ 자격 증명 실패: 비밀번호가 일치하지 않거나 권한이 거부되었습니다.")
