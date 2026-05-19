@@ -3,6 +3,7 @@ from streamlit_js_eval import get_geolocation
 import pandas as pd
 from datetime import datetime
 import os
+import hashlib
 
 # [1] 웹페이지 기본 설정
 st.set_page_config(page_title="공장 안전 가이드", layout="centered")
@@ -26,15 +27,24 @@ st.markdown("""
     .siren-alert { background-color: #fef2f2; border: 2px solid #ef4444; padding: 15px; border-radius: 12px; animation: blink 1.5s infinite; color: #b91c1c; font-weight: bold; margin-bottom: 20px; }
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     
-    /* 🔧 라디오 버튼을 탭 버튼 스타일로 튜닝 */
-    div[data-testid="stRadio"] p { display: none; } /* 메뉴 글씨 숨기기 */
+    /* 네비게이션 라디오 튜닝 */
+    div[data-testid="stRadio"] p { display: none; }
     div[data-testid="stRadio"] div[role="radiogroup"] { gap: 10px; }
     div[data-testid="stRadio"] label { background-color: #ffffff; border: 1px solid #e5e7eb; padding: 12px 24px; border-radius: 8px; font-weight: 600; color: #4b5563; cursor: pointer; }
     div[data-testid="stRadio"] label[data-checked="true"] { background-color: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- [관리자 설정: 화학물질 데이터베이스 (총 9종)] ---
+# --- [🔒 암호학 자격 증명 데이터 설정] ---
+# 비밀번호 'admin1234'를 SHA-256 방식으로 안전하게 해시화한 문자열 값입니다. (소스코드 해킹 방지)
+ADMIN_PASSWORD_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+
+def verify_password(input_password):
+    """입력받은 패스워드를 해시화하여 마스터 해시값과 비교 검증합니다."""
+    hashed_input = hashlib.sha256(input_password.encode()).hexdigest()
+    return hashed_input == ADMIN_PASSWORD_HASH
+
+# --- [화학물질 데이터베이스 (총 9종)] ---
 CHEMICALS = {
     "TOLUENE": {"name": "톨루엔 (Toluene)", "cas_no": "108-88-3", "symbol": "🔥 고인화성 / ⚠️ 급성·만성독성", "danger": "• 고인화성 액체 및 증기\n• 삼켜서 기도로 유입되면 치명적일 수 있음", "emergency": "1. 신선한 공기를 마시게 하고 안정\n2. 오염된 옷을 벗고 물질이 번지지 않게 세척"},
     "ACETONE": {"name": "아세톤 (Acetone)", "cas_no": "67-64-1", "symbol": "🔥 극인화성 / 👁️ 눈 자극성", "danger": "• 고인화성 액체 및 증기\n• 눈에 심한 자극 및 졸음, 현기증 유발", "emergency": "1. 신선한 공기가 있는 곳으로 이동\n2. 다량의 물과 비누로 깨끗이 세척 후 보습"},
@@ -55,22 +65,19 @@ for f, cols in [(DB_LOG, ["일시", "점검자", "점검물질", "상태", "특�
     if not os.path.exists(f):
         pd.DataFrame(columns=cols).to_csv(f, index=False, encoding="utf-8-sig")
 
-# --- [🔧 핵심 수정 부분: 최신 Streamlit 주소 분석 및 페이지 강제 전환] ---
+# --- [주소 분석 및 네비게이션 제어] ---
 qr_chem = st.query_params.get("chem", None)
+admin_bypass = st.query_params.get("admin", None) # 🕵️ 보안용 히든 주소 파라미터 수집
 chem_list = list(CHEMICALS.keys())
 
-if isinstance(qr_chem, list) and len(qr_chem) > 0:
-    qr_chem = qr_chem[0]
+if isinstance(qr_chem, list) and len(qr_chem) > 0: qr_chem = qr_chem[0]
+if qr_chem: qr_chem = str(qr_chem).strip().upper()
 
-if qr_chem:
-    qr_chem = str(qr_chem).strip().upper()
-
-# 어떤 메뉴 인덱스를 열어줄지 변수로 완전 통제
 init_menu_idx = 0
 if qr_chem and qr_chem in CHEMICALS:
-    init_menu_idx = 1  # QR코드가 유효하면 무조건 1번(자료실) 화면이 첫 화면이 됨!
+    init_menu_idx = 1
 
-# --- [상단 대시보드 영역 데이터 로드] ---
+# --- [실시간 알림 및 데이터 동기화] ---
 log_df = pd.read_csv(DB_LOG, encoding="utf-8-sig")
 sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
 active_sos = sos_df[sos_df["상태"] == "🚨 미조치 긴급상황"]
@@ -78,9 +85,17 @@ active_sos = sos_df[sos_df["상태"] == "🚨 미조치 긴급상황"]
 if not active_sos.empty:
     st.markdown(f'<div class="siren-alert">⚠️ [종합방재실 비상 경보] 현재 공장 내에 조치되지 않은 SOS 긴급 상황이 발생했습니다! ({len(active_sos)}건 대기 중)</div>', unsafe_allow_html=True)
 
-# 메인 사이드바
+# --- [⚙️ 권한 설정 레이어 고도화] ---
 st.sidebar.header("⚙️ 시스템 권한 설정")
-user_role = st.sidebar.selectbox("현재 접속 모드", ["👷 현장 작업자 모드", "🖥️ 종합 방재실(관리자) 모드"])
+
+# 주소창에 ?admin=true를 쳤을 때만 사이드바에 관리자 모드가 활성화되도록 은닉 기법 적용
+available_roles = ["👷 현장 작업자 모드"]
+if admin_bypass == "true":
+    available_roles.append("🖥️ 종합 방재실(관리자) 모드")
+else:
+    st.sidebar.info("💡 관리자 관제 센터는 인가된 특수 단말기(보안 파라미터 포함 주소)로만 원격 진입이 가능합니다.")
+
+user_role = st.sidebar.selectbox("현재 접속 모드", available_roles)
 
 # =========================================================================
 # [권한 1] 현장 작업자 모드
@@ -99,18 +114,16 @@ if user_role == "👷 현장 작업자 모드":
         
         sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
         pd.concat([sos_df, new_sos], ignore_index=True).to_csv(DB_SOS, index=False, encoding="utf-8-sig")
-        st.error("🚨 **[SOS 신호가 종합방재실 관제 센터로 즉시 송신되었습니다]** 현 위치에서 안전을 확보하고 구조대를 기다리십시오.")
+        st.error("🚨 **[SOS 신호가 종합방재실 관제 센터로 즉시 송신되었습니다]**")
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.divider()
     
-    # 🔧 st.tabs 대신 주소 명령어로 완벽 제어 가능한 가로형 라디오 메뉴 도입!
     menu_options = ["📍 실시간 위치 지침", "📚 화학물질 QR 자료실"]
     selected_menu = st.radio("메뉴선택", menu_options, index=init_menu_idx, horizontal=True)
     
-    st.write("") # 간격 조절
+    st.write("") 
 
-    # 화면 1: 위치 가이드
     if selected_menu == "📍 실시간 위치 지침":
         st.subheader("현재 내 위치 정보")
         loc = get_geolocation()
@@ -126,7 +139,6 @@ if user_role == "👷 현장 작업자 모드":
         img_file = st.camera_input("카메라 구동")
         if img_file: st.success("✨ 사진이 임시 저장되었습니다.")
 
-    # 화면 2: 화학물질 자료실 (QR 접속 시 이리로 바로 강제 직행!)
     elif selected_menu == "📚 화학물질 QR 자료실":
         st.subheader("📋 공장 취급 화학물질 정보")
         chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
@@ -163,37 +175,67 @@ if user_role == "👷 현장 작업자 모드":
                     st.success("📥 점검 결과가 종합방재실 서버 데이터베이스로 즉시 전송되었습니다!")
 
 # =========================================================================
-# [권한 2] 종합 방재실 관제 센터 모드
+# [권한 2] 종합 방재실 관제 센터 모드 (🔒 SHA-256 2차 패스워드 방어 도입)
 # =========================================================================
 else:
     st.title("🖥️ 종합 방재실 안전관제 대시보드")
-    st.write("공장 내 작업자들의 SOS 신고 현황과 실시간 점검 기록을 실시간 관제합니다.")
     
-    st.subheader("🚨 실시간 SOS 비상 신고 접수 현황")
-    if active_sos.empty:
-        st.success("✅ 현재 접수된 비상 신고가 없습니다. 공장 내부 평온 상태 유지 중")
-    else:
-        st.warning(f"현재 {len(active_sos)}개의 비상 상황이 발생했습니다.")
-        sos_map_data = active_sos.rename(columns={"위치_위도": "lat", "위치_경도": "lon"})
-        st.map(sos_map_data, zoom=12)
+    # 세션 상태 초기화 (비밀번호 인증 여부 확인 플래그)
+    if "admin_authenticated" not in st.session_state:
+        st.session_state["admin_authenticated"] = False
         
-        for index, row in active_sos.iterrows():
-            col_info, col_btn = st.columns([3, 1])
-            with col_info:
-                st.write(f"⏰ **발생시간:** {row['일시']} | **좌표:** {row['위치_위도']:.4f}, {row['위치_경도']:.4f}")
-            with col_btn:
-                if st.button("✅ 조치 완료", key=f"sos_{index}"):
-                    full_sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
-                    full_sos_df.at[index, "상태"] = "조치완료"
-                    full_sos_df.to_csv(DB_SOS, index=False, encoding="utf-8-sig")
-                    st.success("상황 조치 완료")
+    if not st.session_state["admin_authenticated"]:
+        st.warning("🔒 본 화면은 인가된 방재실 관리자만 접근할 수 있는 국가 중요 보안 시설 관제창입니다.")
+        
+        # 폼 내부 비밀번호 입력
+        with st.form("admin_auth_form"):
+            passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password", help="SHA-256 보안 해시 레이어가 적용되어 보호됩니다.")
+            auth_submit = st.form_submit_button("🔑 관제 센터 시스템 기동")
+            
+            if auth_submit:
+                if verify_password(passwd_input):
+                    st.session_state["admin_authenticated"] = True
+                    st.success("🔓 암호학 자격 증명 성공! 방재실 관제 권한이 획득되었습니다.")
                     st.rerun()
-
-    st.divider()
-
-    st.subheader("📋 현장 작업자 실시간 점검 기록 DB")
-    current_logs = pd.read_csv(DB_LOG, encoding="utf-8-sig")
-    if current_logs.empty:
-        st.info("아직 제출된 현장 안전 점검 일지가 없습니다.")
+                else:
+                    st.error("❌ 자격 증명 실패: 비밀번호가 일치하지 않거나 권한이 거부되었습니다.")
+                    
+    # 비밀번호 검증을 완벽하게 통과한 경우에만 아래 실제 데이터 대시보드를 렌더링
     else:
-        st.dataframe(current_logs.sort_values(by="일시", ascending=False), use_container_width=True)
+        st.success("🟢 통제 권한 인증 상태: 방재실 최고 관리자 자격 활성화됨")
+        if st.button("🔒 안전 로그아웃"):
+            st.session_state["admin_authenticated"] = False
+            st.rerun()
+            
+        st.divider()
+        
+        # 1. 실시간 SOS 상황판
+        st.subheader("🚨 실시간 SOS 비상 신고 접수 현황")
+        if active_sos.empty:
+            st.success("✅ 현재 접수된 비상 신고가 없습니다. 공장 내부 평온 상태 유지 중")
+        else:
+            st.warning(f"현재 {len(active_sos)}개의 비상 상황이 발생했습니다.")
+            sos_map_data = active_sos.rename(columns={"위치_위도": "lat", "위치_경도": "lon"})
+            st.map(sos_map_data, zoom=12)
+            
+            for index, row in active_sos.iterrows():
+                col_info, col_btn = st.columns([3, 1])
+                with col_info:
+                    st.write(f"⏰ **발생시간:** {row['일시']} | **좌표:** {row['위치_위도']:.4f}, {row['위치_경도']:.4f}")
+                with col_btn:
+                    if st.button("✅ 조치 완료", key=f"sos_{index}"):
+                        full_sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
+                        full_sos_df.at[index, "상태"] = "조치완료"
+                        full_sos_df.to_csv(DB_SOS, index=False, encoding="utf-8-sig")
+                        st.success("상황 조치 완료")
+                        st.rerun()
+
+        st.divider()
+
+        # 2. 실시간 현장 점검 로그 모니터링
+        st.subheader("📋 현장 작업자 실시간 점검 기록 DB")
+        current_logs = pd.read_csv(DB_LOG, encoding="utf-8-sig")
+        if current_logs.empty:
+            st.info("아직 제출된 현장 안전 점검 일지가 없습니다.")
+        else:
+            st.dataframe(current_logs.sort_values(by="일시", ascending=False), use_container_width=True)
