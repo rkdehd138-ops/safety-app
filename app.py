@@ -4,7 +4,7 @@ from streamlit_js_eval import get_geolocation
 # [1] 웹페이지 기본 설정
 st.set_page_config(page_title="공장 안전 가이드", layout="centered")
 
-# --- [🎨 라이트 테마 CSS 적용] ---
+# --- [🎨 대중적이고 깔끔한 라이트 테마 CSS 적용] ---
 st.markdown("""
     <style>
     .stApp { background-color: #f8f9fa; color: #333333; font-family: 'Noto Sans KR', sans-serif; }
@@ -96,66 +96,75 @@ CHEMICALS = {
     }
 }
 
-# --- [🆕 QR 주소 인식 파트] ---
+# --- [🆕 주소창 QR 데이터 완벽 분석 및 이동 로직] ---
 query_params = st.query_params
 qr_chem = query_params.get("chem", None)
 chem_list = list(CHEMICALS.keys())
 
-# 기존 라디오 버튼 방식 대신 직관적인 인덱스 탭 방식으로 더 튼튼하게 변경
-default_tab_idx = 0
+# 기본적으로 어떤 탭 화면을 보여줄지 변수로 제어합니다.
+# QR 주소가 들어왔고 유효하다면 무조건 화학물질 자료실 화면(1번)을 보여줍니다.
+current_page_idx = 0
 if qr_chem and qr_chem in CHEMICALS:
-    default_tab_idx = 1
+    current_page_idx = 1
 
 # --- [웹 화면 구현 시작] ---
 st.title("🏭 스마트 안전관리 모바일 가이드")
 
-# 탭 구조 재설정 (default_tab_idx로 시작 시 열릴 탭 제어)
-tabs = st.tabs(["📍 실시간 위치 지침", "📚 화학물질 자료실"])
+# st.tabs 구조를 사용하면 시스템이 첫 번째 탭으로 화면을 고정해버리므로, 
+# 주소 인식을 완벽히 지원하는 가로형 버튼 메뉴(st.toggle/radio 대체제) 방식으로 수정하여 탭을 동적으로 전환합니다.
+menu_tabs = ["📍 실시간 위치 지침", "📚 화학물질 자료실"]
+selected_tab = st.radio(
+    "메뉴 선택", 
+    menu_tabs, 
+    index=current_page_idx, 
+    horizontal=True, 
+    label_visibility="collapsed"
+)
 
-# --- [탭 1: 위치 확인 및 카메라 기능] ---
-with tabs[0]:
-    if default_tab_idx == 0:
-        st.subheader("현재 내 위치 확인")
-        loc = get_geolocation()
-        if loc:
-            curr_lat = loc['coords']['latitude']
-            curr_lon = loc['coords']['longitude']
-            st.write(f"📍 현재 나의 좌표: **{curr_lat:.4f}, {curr_lon:.4f}**")
-            
-            found = False
-            for area in AREAS:
-                if abs(curr_lat - area['lat']) < 0.0008 and abs(curr_lon - area['lon']) < 0.0008:
-                    st.success(f"✅ **위치 확인 완료:** {area['name']}")
-                    st.warning(f"⚠️ **현장 안전 수칙:** {area['info']}")
-                    found = True
-                    break
-            if not found:
-                st.info("ℹ️ 현재 등록된 안전 수칙 구역 외부에 있습니다.")
-        else:
-            st.info("🔄 위치 정보를 가져오는 중입니다. 모바일 기기의 GPS 권한을 확인해 주세요.")
+st.write("") # 간격 조절용 공백
+
+# --- [1번 화면: 실시간 위치 지침 영역] ---
+if selected_tab == "📍 실시간 위치 지침":
+    st.subheader("현재 내 위치 확인")
+    loc = get_geolocation()
+    if loc:
+        curr_lat = loc['coords']['latitude']
+        curr_lon = loc['coords']['longitude']
+        st.write(f"📍 현재 나의 좌표: **{curr_lat:.4f}, {curr_lon:.4f}**")
+        
+        found = False
+        for area in AREAS:
+            if abs(curr_lat - area['lat']) < 0.0008 and abs(curr_lon - area['lon']) < 0.0008:
+                st.success(f"✅ **위치 확인 완료:** {area['name']}")
+                st.warning(f"⚠️ **현장 안전 수칙:** {area['info']}")
+                found = True
+                break
+        if not found:
+            st.info("ℹ️ 현재 등록된 안전 수칙 구역 외부에 있습니다.")
     else:
-        st.info("ℹ️ QR 코드가 인식되어 자료실 탭으로 자동 이동했습니다. 위치 확인을 하려면 아래 버튼을 누르거나 새로고침 해주세요.")
-        if st.button("위치 지침 새로고침"):
-            st.rerun()
+        st.info("🔄 위치 정보를 가져오는 중입니다. 모바일 기기의 GPS 권한을 확인해 주세요.")
 
     st.divider()
+
     st.subheader("📸 현장 장비 및 QR 촬영")
     st.write("카메라 기능을 켜서 현장 사진을 촬영하거나 점검할 수 있습니다.")
+    
+    # 💥 에러의 원인이었던 불안정한 camera_input_live 대신 Streamlit 기본 내장 카메라 모듈로 안전하게 대체했습니다.
     img_file = st.camera_input("스마트폰 카메라 구동")
     if img_file:
         st.image(img_file, caption="촬영된 이미지 확인", use_container_width=True)
         st.success("✨ 사진이 정상적으로 저장되었습니다.")
 
-# --- [탭 2: 화학물질 자료실 메뉴] ---
-with tabs[1]:
+# --- [2번 화면: 화학물질 자료실 영역] ---
+elif selected_tab == "📚 화학물질 자료실":
     st.subheader("📋 공장 취급 화학물질 정보")
     chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
     
-    # QR코드로 들어온 경우 인덱스 지정
+    # QR코드로 유입된 경우 해당 물질을 셀렉트박스의 기본 인덱스로 자동 지정합니다.
     default_index = 0
     if qr_chem and qr_chem in CHEMICALS:
         default_index = chem_list.index(qr_chem)
-        st.success(f"🔍 QR 코드가 인식되었습니다: {CHEMICALS[qr_chem]['name']}")
+        st.success(f"🔍 QR 코드가 성공적으로 인식되었습니다: **{CHEMICALS[qr_chem]['name']}**")
     else:
         st.write("안전 데이터 확인이 필요한 화학물질을 선택하세요.")
         
@@ -165,6 +174,7 @@ with tabs[1]:
         chem_key = chem_options[selected_name]
         chem_data = CHEMICALS[chem_key]
         
+        # 선택된 물질 정보 출력
         st.markdown(f"## **{chem_data['name']}**")
         st.caption(f"🔗 **CAS No.** {chem_data['cas_no']}")
         st.error(f"⚠️ **분류 및 기호:** {chem_data['symbol']}")
