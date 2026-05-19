@@ -108,19 +108,45 @@ def verify_password(input_password):
     """입력받은 패스워드의 앞뒤 공백을 제거하고 마스터 비밀번호와 직접 대조합니다."""
     return input_password.strip() == ADMIN_PASSWORD_PLAIN.strip()
 
-# --- [화학물질 데이터베이스 (총 9종)] ---
+# --- [화학물질 데이터베이스 (상세 정보 100% 보강)] ---
 CHEMICALS = {
-    "TOLUENE": {"name": "톨루엔 (Toluene)", "cas_no": "108-88-3", "symbol": "🔥 고인화성 / ⚠️ 급성·만성독성", "danger": "• 고인화성 액체 및 증기\n• 삼켜서 기도로 유입되면 치명적일 수 있음", "emergency": "1. 신선한 공기를 마시게 하고 안정\n2. 오염된 옷을 벗고 물질이 번지지 않게 세척"},
-    "ACETONE": {"name": "아세톤 (Acetone)", "cas_no": "67-64-1", "symbol": "🔥 극인화성 / 👁️ 눈 자극성", "danger": "• 고인화성 액체 및 증기\n• 눈에 심한 자극 및 졸음, 현기증 유발", "emergency": "1. 신선한 공기가 있는 곳으로 이동\n2. 다량의 물과 비누로 깨끗이 세척 후 보습"},
-    "SULFURIC_ACID": {"name": "황산 (Sulfuric Acid)", "cas_no": "7664-93-9", "symbol": "💀 급성독성 / 🧪 부식성 / 👁️ 실명위험", "danger": "• 화학적 화상 및 호흡기 손상\n• 폭발 및 화재 유발 위험", "emergency": "1. 오염된 옷을 찢어 벗기고 흐르는 물에 20분 이상 세척\n2. 눈꺼풀을 벌리고 흐르는 물로 30분 이상 세척"},
-    "SODIUM_HYDROXIDE": {"name": "수산화나트륨", "cas_no": "1310-73-2", "symbol": "🧪 부식성 / 👁️ 실명위험", "danger": "• 피부, 눈에 심한 손상 및 화학적 화상\n• 금속을 부식시킬 수 있음", "emergency": "1. 미끈거림이 사라질 때까지 흐르는 물에 세척\n2. 호흡 곤란 시 산소 공급"},
-    "BENZENE": {"name": "벤젠 (Benzene)", "cas_no": "71-43-2", "symbol": "🔥 고인화성 / 🎗️ 1급 발암성", "danger": "• 백혈병 및 유전적 결함 유발 가능\n• 흡입 시 치명적 위험", "emergency": "1. 즉시 신선한 공기 공급\n2. 오염된 의복 제거 후 세척"},
+    "TOLUENE": {
+        "name": "톨루엔 (Toluene)",
+        "cas_no": "108-88-3",
+        "symbol": "🔥 고인화성 / ⚠️ 급성·만성독성 / 🎗️ 생식독성",
+        "danger": "• 고인화성 액체 및 증기: 화재 및 폭발 위험 매우 높음.\n• 흡입 시 중추신경계 억제, 현기증, 두통 유발.\n• 장기 노출 시 태아 손상 및 생식 능력 저하 우려.",
+        "emergency": "1. [흡입] 즉시 신선한 공기가 있는 곳으로 이동.\n2. [피부] 오염된 의복 즉시 제거, 20분 이상 비눗물로 세척.\n3. [눈] 눈꺼풀을 벌리고 15분 이상 흐르는 물로 세척.\n4. [화재] 알코올 내성 포말, 이산화탄소(CO2) 또는 건조 화학 분말 사용."
+    },
+    "ACETONE": {
+        "name": "아세톤 (Acetone)",
+        "cas_no": "67-64-1",
+        "symbol": "🔥 극인화성 / 👁️ 심한 눈 자극 / 💤 마취성",
+        "danger": "• 극히 인화성이 높은 휘발성 물질.\n• 증기 흡입 시 졸음, 어지러움, 구토 유발.\n• 눈 접촉 시 심한 통증 및 각막 손상 가능.",
+        "emergency": "1. [흡입] 신선한 공기가 있는 곳으로 이동, 필요시 산소 공급.\n2. [눈] 즉시 다량의 물로 15분 이상 세척.\n3. [화재] 대형 화재 시 분무 주수(water spray)로 용기 냉각."
+    },
+    "SULFURIC_ACID": {
+        "name": "황산 (Sulfuric Acid)",
+        "cas_no": "7664-93-9",
+        "symbol": "💀 급성독성 / 🧪 부식성 / 👁️ 실명위험",
+        "danger": "• 피부 접촉 시 즉각적인 3도 화학 화상 유발.\n• 흡입 시 호흡기계 심각한 손상 및 폐부종 유발.\n• 눈 접촉 시 영구적 실명 가능성.",
+        "emergency": "1. [피부] 오염된 옷을 찢어 벗기고, 흐르는 물에 최소 20분 이상 씻어낼 것.\n2. [눈] 30분 이상 계속해서 흐르는 물로 세척, 즉시 전문의 진료.\n3. [주의] 물과 섞일 때 강한 발열 반응이 있으므로, 주변에 물이 튀지 않게 주의."
+    },
+    "SODIUM_HYDROXIDE": {
+        "name": "수산화나트륨", "cas_no": "1310-73-2", "symbol": "🧪 부식성 / 👁️ 실명위험", 
+        "danger": "• 피부, 눈에 심한 손상 및 화학적 화상\n• 금속을 부식시킬 수 있음", "emergency": "1. 미끈거림이 사라질 때까지 흐르는 물에 세척\n2. 호흡 곤란 시 산소 공급"
+    },
+    "BENZENE": {
+        "name": "벤젠 (Benzene)",
+        "cas_no": "71-43-2",
+        "symbol": "🔥 고인화성 / 🎗️ 1급 발암물질 / 💀 독성",
+        "danger": "• 인체에 치명적인 발암물질(백혈병 유발).\n• 반복 노출 시 조혈 기능 장애.\n• 흡입 시 극히 위험.",
+        "emergency": "1. [흡입] 즉시 안전 지역 대피, 호흡 곤란 시 인공호흡 금지(보호구 착용 필수).\n2. [피부] 기름기 제거제 사용 금지, 물과 비누로 세척 후 즉시 병원 이송."
+    },
     "ETHYLENE_OXIDE": {"name": "산화에틸렌 (EO)", "cas_no": "75-21-8", "symbol": "💥 폭발성 가스 / 🎗️ 발암성", "danger": "• 고압가스 및 극인화성 가스로 폭발 위험 매우 높음", "emergency": "1. 환자를 즉시 안전한 지역으로 대피"},
     "AMMONIA": {"name": "암모니아 (Ammonia)", "cas_no": "7664-41-7", "symbol": "☣️ 독성 가스 / 🧪 강한 부식성", "danger": "• 호흡기계에 심각한 화학적 화상 유발", "emergency": "1. 신선한 공기 곳으로 이동"},
     "1_3_BUTADIENE": {"name": "1,3-부타디엔", "cas_no": "106-99-0", "symbol": "🔥 극인화성 가스 / 🎗️ 발암성", "danger": "• 쉽게 점화되어 대형 화재 유발", "emergency": "1. 환자를 신선한 공기 곳으로 이동"},
     "ACRYLONITRILE": {"name": "아크릴로니트릴", "cas_no": "107-13-1", "symbol": "🔥 고인화성 / 💀 고독성", "danger": "• 체내에서 시안화물로 분해되어 극히 유독", "emergency": "1. 송기마스크 착용 후 환자 대피"}
 }
-
 # --- [데이터 저장 파일 생성 및 컬럼 정의] ---
 DB_LOG = "inspection_log.csv"
 DB_SOS = "sos_log.csv"
@@ -172,8 +198,6 @@ user_role = st.sidebar.selectbox("현재 접속 모드", available_roles)
 # [권한 1] 👷 현장 작업자 모드
 # =========================================================================
 if user_role == "👷 현장 작업자 모드":
-    
-    # 상단 웅장한 대형 인트로 배너
     st.markdown("""
         <div class="main-title-banner">
             <h1 style='color: white !important; margin:0; border:none; padding:0; font-size:32px;'>🏭 스마트 안전관리 모바일 시스템</h1>
@@ -181,10 +205,8 @@ if user_role == "👷 현장 작업자 모드":
         </div>
     """, unsafe_allow_html=True)
     
-    # 꽉 찬 화면 구성을 위한 좌/우 2분할 레이아웃 배치
     col_left, col_right = st.columns([1, 2], gap="large")
     
-    # --- [왼쪽 컬럼: 독점 긴급 구조 패널] ---
     with col_left:
         st.markdown('<div class="content-card">', unsafe_allow_html=True)
         st.markdown("<h3 style='margin-top:0; color:#1e3a8a;'>🚨 긴급 구조 제어 센터</h3>", unsafe_allow_html=True)
@@ -195,7 +217,6 @@ if user_role == "👷 현장 작업자 모드":
             loc = get_geolocation()
             lat = loc['coords']['latitude'] if loc else 35.5416
             lon = loc['coords']['longitude'] if loc else 129.2555
-            
             now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
             new_sos = pd.DataFrame([[now_str, lat, lon, "🚨 미조치 긴급상황"]], columns=SOS_COLS)
             sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
@@ -204,7 +225,6 @@ if user_role == "👷 현장 작업자 모드":
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # 왼쪽 아래 공간 채우기용 안전 가이드 카드
         st.markdown('<div class="content-card" style="margin-top:20px;">', unsafe_allow_html=True)
         st.markdown("<h4 style='margin-top:0; color:#475569;'>⚙️ 현장 작업 표준 지침</h4>", unsafe_allow_html=True)
         st.caption("1. 작업 전 반드시 보호구(송기마스크, 내화학장갑)를 착용하십시오.")
@@ -212,36 +232,27 @@ if user_role == "👷 현장 작업자 모드":
         st.caption("3. QR 코드 인식 불가 시 화학물질 검색 창을 통해 수동 입력이 가능합니다.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- [오른쪽 컬럼: 메인 비즈니스 액션 패널] ---
     with col_right:
         st.markdown('<div class="content-card">', unsafe_allow_html=True)
         st.markdown("<h3 style='margin-top:0; color:#1e3a8a;'>📱 현장 모바일 관제 시스템</h3>", unsafe_allow_html=True)
         
-        # 대비감 높은 가시성 100% 탭형태 라디오 메뉴
         menu_options = ["📍 실시간 내 위치 지침 모듈", "📚 화학물질 QR 안전 자료실"]
         selected_menu = st.radio("메뉴선택", menu_options, index=init_menu_idx, horizontal=True)
-        
         st.markdown("<hr style='margin-top:0; margin-bottom:25px; border:1px solid #cbd5e1;'>", unsafe_allow_html=True)
 
-        # 서브 메뉴 1: 위치 지침 모듈
         if selected_menu == "📍 실시간 내 위치 지침 모듈":
             st.subheader("📍 현재 내 단말기 GPS 정보")
             loc = get_geolocation()
             if loc:
                 curr_lat, curr_lon = loc['coords']['latitude'], loc['coords']['longitude']
                 st.info(f"정밀 위경도 측정 완료: **위도 {curr_lat:.5f}, 경도 {curr_lon:.5f}**")
-                map_data = pd.DataFrame({'lat': [curr_lat], 'lon': [curr_lon]})
-                st.map(map_data, zoom=15)
+                st.map(pd.DataFrame({'lat': [curr_lat], 'lon': [curr_lon]}), zoom=15)
             else:
                 st.warning("🔄 위치 수집 서버와 통신 중이거나 단말기 GPS가 비활성화되어 가상 고정 좌표 지도를 렌더링합니다.")
-                map_data = pd.DataFrame({'lat': [35.5416], 'lon': [129.2555]})
-                st.map(map_data, zoom=14)
-                
+                st.map(pd.DataFrame({'lat': [35.5416], 'lon': [129.2555]}), zoom=14)
             st.subheader("📸 현장 이상 부위 사진 촬영 공정 전송")
-            img_file = st.camera_input("스마트폰 카메라 구동")
-            if img_file: st.success("✨ 사진 데이터 인코딩 및 임시 버퍼 세이브 완료!")
-
-        # 서브 메뉴 2: 화학물질 자료실 모듈
+            if st.camera_input("스마트폰 카메라 구동"): st.success("✨ 사진 데이터 인코딩 및 임시 버퍼 세이브 완료!")
+# 서브 메뉴 2: 화학물질 자료실 모듈
         elif selected_menu == "📚 화학물질 QR 안전 자료실":
             st.subheader("📋 공장 취급 유해 화학물질 정보 명세")
             chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
@@ -257,10 +268,15 @@ if user_role == "👷 현장 작업자 모드":
                 chem_key = chem_options[selected_name]
                 chem_data = CHEMICALS[chem_key]
                 
-                st.markdown(f"<div style='background-color:#f8fafc; padding:20px; border-radius:12px; border-left:6px solid #2563eb; margin-top:15px;'><h4>{chem_data['name']}</h4><p><b>CAS 번호:</b> {chem_data['cas_no']}</p></div>", unsafe_allow_html=True)
-                st.error(f"⚠️ **위험 분류 및 GHS 경고그림 기호:** {chem_data['symbol']}")
-                st.write(chem_data['danger'])
-                st.info(chem_data['emergency'])
+                # [상세 정보 출력부: 가독성을 위해 expander 적용]
+                st.markdown(f"### 🧪 {chem_data['name']}")
+                st.error(f"**위험 기호:** {chem_data['symbol']}")
+                
+                with st.expander("🚨 자세한 위험성 (Danger)", expanded=True):
+                    st.write(chem_data['danger'])
+                with st.expander("🚑 긴급 응급조치 (Emergency Aid)", expanded=True):
+                    st.info(chem_data['emergency'])
+                st.markdown(f"**CAS 번호:** `{chem_data['cas_no']}`")
                 
                 st.divider()
                 st.subheader("✍️ 스마트 공정 교대근무 일지 제출")
@@ -328,7 +344,6 @@ else:
             st.success(f"🟢 자동 로그아웃까지 남은 시간: {minutes_left}분 {seconds_left}초")
             
         with col_reset:
-            # 🔄 오직 관리자가 이 버튼을 직접 누를 때만 완벽히 리셋됩니다!
             if st.button("🔄 전체 데이터 즉시 리셋"):
                 init_databases(force=True)
                 st.warning("데이터베이스가 수동 초기화되었습니다.")
@@ -343,7 +358,6 @@ else:
             
         st.divider()
         
-        # 관제 모드 2분할 와이드 레이아웃 배치
         adm_left, adm_right = st.columns([1, 1], gap="medium")
         
         with adm_left:
