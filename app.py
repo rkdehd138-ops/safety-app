@@ -4,7 +4,7 @@ from streamlit_js_eval import get_geolocation
 # [1] 웹페이지 기본 설정
 st.set_page_config(page_title="공장 안전 가이드", layout="centered")
 
-# --- [🎨 대중적이고 깔끔한 라이트 테마 CSS 적용] ---
+# --- [🎨 라이트 테마 CSS 적용] ---
 st.markdown("""
     <style>
     .stApp { background-color: #f8f9fa; color: #333333; font-family: 'Noto Sans KR', sans-serif; }
@@ -91,18 +91,4 @@ CHEMICALS = {
         "name": "아크릴로니트릴 (Acrylonitrile / AN)",
         "cas_no": "107-13-1",
         "symbol": "🔥 고인화성 액체 / 💀 고독성(시안화물 계열) / 🎗️ 발암성 위험",
-        "danger": "• 인화성이 매우 높고 증기는 폭발성 혼합물을 형성함\n• 흡입, 섭취, 피부 흡수 시 모두 극히 유독함 (체내에서 시안화수소로 분해)\n• 피부 및 눈에 심한 자극과 화학적 화상 유발 가능, 암 유발 물질",
-        "emergency": "1. 흡입 시 구조자는 송기마스크를 착용한 후 환자를 대피시키고, 필요시 시안화물 해독제 키트 준비 안내\n2. 피부 흡수가 매우 빠르므로 접촉 즉시 오염된 의복을 완전히 제거하고 흐르는 물로 최소 20분 이상 세척\n3. 구조자가 환자의 토사물이나 신체 접촉으로 교차 오염되지 않도록 철저히 주의"
-    }
-}
-
-# --- [🆕 QR 주소 인식 파트] ---
-query_params = st.query_params
-qr_chem = query_params.get("chem", None)
-
-# 화학물질 데이터 순서 목록 생성
-chem_list = list(CHEMICALS.keys())
-
-# 세션 상태(session_state)를 이용해 기본 활성화할 탭 저장 (QR 인식 시 자료실 탭인 1번으로 고정)
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = "
+        "danger": "• 인화성이 매우 높고 증기는 폭발성 혼합물을 형성함\n• 흡
