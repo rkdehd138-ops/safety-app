@@ -91,4 +91,86 @@ CHEMICALS = {
         "name": "아크릴로니트릴 (Acrylonitrile / AN)",
         "cas_no": "107-13-1",
         "symbol": "🔥 고인화성 액체 / 💀 고독성(시안화물 계열) / 🎗️ 발암성 위험",
-        "danger": "• 인화성이 매우 높고 증기는 폭발성 혼합물을 형성함\n• 흡
+        "danger": "• 인화성이 매우 높고 증기는 폭발성 혼합물을 형성함\n• 흡입, 섭취, 피부 흡수 시 모두 극히 유독함 (체내에서 시안화수소로 분해)\n• 피부 및 눈에 심한 자극과 화학적 화상 유발 가능, 암 유발 물질",
+        "emergency": "1. 흡입 시 구조자는 송기마스크를 착용한 후 환자를 대피시키고, 필요시 시안화물 해독제 키트 준비 안내\n2. 피부 흡수가 매우 빠르므로 접촉 즉시 오염된 의복을 완전히 제거하고 흐르는 물로 최소 20분 이상 세척\n3. 구조자가 환자의 토사물이나 신체 접촉으로 교차 오염되지 않도록 철저히 주의"
+    }
+}
+
+# --- [🆕 QR 주소 인식 파트] ---
+query_params = st.query_params
+qr_chem = query_params.get("chem", None)
+chem_list = list(CHEMICALS.keys())
+
+# 기존 라디오 버튼 방식 대신 직관적인 인덱스 탭 방식으로 더 튼튼하게 변경
+default_tab_idx = 0
+if qr_chem and qr_chem in CHEMICALS:
+    default_tab_idx = 1
+
+# --- [웹 화면 구현 시작] ---
+st.title("🏭 스마트 안전관리 모바일 가이드")
+
+# 탭 구조 재설정 (default_tab_idx로 시작 시 열릴 탭 제어)
+tabs = st.tabs(["📍 실시간 위치 지침", "📚 화학물질 자료실"])
+
+# --- [탭 1: 위치 확인 및 카메라 기능] ---
+with tabs[0]:
+    if default_tab_idx == 0:
+        st.subheader("현재 내 위치 확인")
+        loc = get_geolocation()
+        if loc:
+            curr_lat = loc['coords']['latitude']
+            curr_lon = loc['coords']['longitude']
+            st.write(f"📍 현재 나의 좌표: **{curr_lat:.4f}, {curr_lon:.4f}**")
+            
+            found = False
+            for area in AREAS:
+                if abs(curr_lat - area['lat']) < 0.0008 and abs(curr_lon - area['lon']) < 0.0008:
+                    st.success(f"✅ **위치 확인 완료:** {area['name']}")
+                    st.warning(f"⚠️ **현장 안전 수칙:** {area['info']}")
+                    found = True
+                    break
+            if not found:
+                st.info("ℹ️ 현재 등록된 안전 수칙 구역 외부에 있습니다.")
+        else:
+            st.info("🔄 위치 정보를 가져오는 중입니다. 모바일 기기의 GPS 권한을 확인해 주세요.")
+    else:
+        st.info("ℹ️ QR 코드가 인식되어 자료실 탭으로 자동 이동했습니다. 위치 확인을 하려면 아래 버튼을 누르거나 새로고침 해주세요.")
+        if st.button("위치 지침 새로고침"):
+            st.rerun()
+
+    st.divider()
+    st.subheader("📸 현장 장비 및 QR 촬영")
+    st.write("카메라 기능을 켜서 현장 사진을 촬영하거나 점검할 수 있습니다.")
+    img_file = st.camera_input("스마트폰 카메라 구동")
+    if img_file:
+        st.image(img_file, caption="촬영된 이미지 확인", use_container_width=True)
+        st.success("✨ 사진이 정상적으로 저장되었습니다.")
+
+# --- [탭 2: 화학물질 자료실 메뉴] ---
+with tabs[1]:
+    st.subheader("📋 공장 취급 화학물질 정보")
+    chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
+    
+    # QR코드로 들어온 경우 인덱스 지정
+    default_index = 0
+    if qr_chem and qr_chem in CHEMICALS:
+        default_index = chem_list.index(qr_chem)
+        st.success(f"🔍 QR 코드가 인식되었습니다: {CHEMICALS[qr_chem]['name']}")
+    else:
+        st.write("안전 데이터 확인이 필요한 화학물질을 선택하세요.")
+        
+    selected_name = st.selectbox("🔍 화학물질 검색/선택", list(chem_options.keys()), index=default_index)
+    
+    if selected_name:
+        chem_key = chem_options[selected_name]
+        chem_data = CHEMICALS[chem_key]
+        
+        st.markdown(f"## **{chem_data['name']}**")
+        st.caption(f"🔗 **CAS No.** {chem_data['cas_no']}")
+        st.error(f"⚠️ **분류 및 기호:** {chem_data['symbol']}")
+        
+        with st.expander("🚨 유해·위험 문구 상세", expanded=True):
+            st.markdown(chem_data['danger'].replace("\n", "\n\n"))
+            
+        with st.expander("🩹 사고 시 긴급 응급조치 방법", expanded=True):
+            st.info(chem_data['emergency'])
