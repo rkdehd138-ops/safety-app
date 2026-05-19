@@ -5,33 +5,99 @@ from datetime import datetime, timedelta
 import os
 import time
 
-# [1] 웹페이지 기본 설정
-st.set_page_config(page_title="공장 안전 가이드", layout="centered")
+# [1] 🖥️ 웹페이지 기본 설정 (화면을 꽉 채우기 위해 wide 레이아웃으로 설정)
+st.set_page_config(page_title="스마트 공장 안전관리 시스템", layout="wide")
 
-# --- [🎨 세련된 대시보드 및 네비게이션 테마 CSS 적용] ---
+# --- [🎨 화면을 빈틈없이 꽉 채우는 프리미엄 CSS 테마 스타일링] ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f8f9fa; color: #333333; font-family: 'Noto Sans KR', sans-serif; }
-    h1 { color: #1e3a8a !important; font-weight: 700; padding-bottom: 10px; border-bottom: 3px solid #3b82f6; margin-bottom: 25px !important; }
+    /* 전체 배경 및 폰트 세팅 */
+    .stApp { background-color: #f1f5f9; color: #1e293b; font-family: 'Noto Sans KR', sans-serif; }
     
-    /* 대시보드 스탯 스타일 */
-    .metric-container { background-color: #ffffff; border: 1px solid #e5e7eb; padding: 15px; border-radius: 12px; text-align: center; box-shadow: 0px 4px 6px rgba(0,0,0,0.02); }
-    .metric-title { font-size: 14px; color: #6b7280; font-weight: 600; }
-    .metric-value { font-size: 24px; color: #1e3a8a; font-weight: 700; margin-top: 5px; }
+    /* 대형 메인 타이틀 배너 */
+    .main-title-banner {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 24px;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+    }
     
-    /* 🚨 SOS 긴급 버튼 전용 스타일 */
-    .sos-button button { background-color: #dc2626 !important; color: white !important; font-size: 16px !important; border-radius: 12px !important; box-shadow: 0px 4px 10px rgba(220, 38, 38, 0.3) !important; }
-    .sos-button button:hover { background-color: #b91c1c !important; }
+    /* 꽉 찬 카드형 컨테이너 (빈 공간 방지) */
+    .content-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 25px;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+        height: 100%;
+    }
     
-    /* 🚨 실시간 사이렌 애니메이션 효과 */
-    .siren-alert { background-color: #fef2f2; border: 2px solid #ef4444; padding: 15px; border-radius: 12px; animation: blink 1.5s infinite; color: #b91c1c; font-weight: bold; margin-bottom: 20px; }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    /* 🚨 SOS 독점 초대형 버튼 */
+    .sos-container button {
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+        color: white !important;
+        font-size: 22px !important;
+        font-weight: 800 !important;
+        padding: 20px 0px !important;
+        width: 100% !important;
+        border-radius: 14px !important;
+        border: none !important;
+        box-shadow: 0px 8px 20px rgba(239, 68, 68, 0.4) !important;
+        transition: all 0.2s ease-in-out;
+    }
+    .sos-container button:hover {
+        transform: scale(1.02);
+        box-shadow: 0px 10px 25px rgba(239, 68, 68, 0.5) !important;
+    }
     
-    /* 네비게이션 라디오 튜닝 */
+    /* 🚨 실시간 사이렌 애니메이션 (상단 가득 채우기) */
+    .siren-alert {
+        background-color: #fef2f2;
+        border: 2px solid #ef4444;
+        padding: 18px;
+        border-radius: 12px;
+        animation: blink 1.5s infinite;
+        color: #b91c1c;
+        font-weight: 800;
+        font-size: 16px;
+        margin-bottom: 25px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+    }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    
+    /* 📻 라디오 메뉴 버튼 커스텀 스타일링 (빈칸 오류 완벽 해결) */
     div[data-testid="stRadio"] p { display: none; }
-    div[data-testid="stRadio"] div[role="radiogroup"] { gap: 10px; }
-    div[data-testid="stRadio"] label { background-color: #ffffff; border: 1px solid #e5e7eb; padding: 12px 24px; border-radius: 8px; font-weight: 600; color: #4b5563; cursor: pointer; }
-    div[data-testid="stRadio"] label[data-checked="true"] { background-color: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        display: flex;
+        flex-direction: row;
+        gap: 15px;
+        width: 100%;
+        margin-bottom: 25px;
+    }
+    div[data-testid="stRadio"] label {
+        flex: 1;
+        background-color: #e2e8f0 !important;
+        border: 2px solid #cbd5e1 !important;
+        padding: 15px 20px !important;
+        border-radius: 12px !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
+        text-align: center !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    div[data-testid="stRadio"] label[data-checked="true"] {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        color: white !important;
+        border-color: #1d4ed8 !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -62,7 +128,6 @@ LOG_COLS = ["일시", "점검자", "점검물질", "상태", "특이사항"]
 SOS_COLS = ["일시", "위치_위도", "위치_경도", "상태"]
 
 def init_databases(force=False):
-    """데이터베이스 파일을 초기화합니다. force가 True이면 무조건 새로 만듭니다."""
     if force or not os.path.exists(DB_LOG):
         pd.DataFrame(columns=LOG_COLS).to_csv(DB_LOG, index=False, encoding="utf-8-sig")
     if force or not os.path.exists(DB_SOS):
@@ -70,31 +135,9 @@ def init_databases(force=False):
 
 init_databases()
 
-# =========================================================================
-# ⏰ [한국 시간 기준 오전 7시 정각 자동 리셋 시스템]
-# =========================================================================
-# 스트림릿 클라우드 서버 시간(UTC)을 한국 시간(KST = UTC + 9시간)으로 변환
+# --- [시간 연산을 위한 기본 세팅 (한국 표준시)] ---
 now_utc = datetime.utcnow()
 now_kst = now_utc + timedelta(hours=9)
-
-# 오늘 아침 7시 정각 기준점 계산
-today_reset_time = now_kst.replace(hour=7, minute=0, second=0, microsecond=0)
-
-# 만약 현재 시간이 오늘 아침 7시 이전이라면, '이전 리셋' 기준점은 '어제 아침 7시'가 됩니다.
-if now_kst < today_reset_time:
-    last_reset_target = today_reset_time - timedelta(days=1)
-else:
-    last_reset_target = today_reset_time
-
-# 세션 상태에 마지막으로 리셋이 수행된 날짜 기록 변수 생성
-if "last_auto_reset_date" not in st.session_state:
-    st.session_state["last_auto_reset_date"] = None
-
-# 현재 계산된 리셋 목표일과 세션에 기록된 마지막 리셋 날짜를 비교하여 자동 초기화 수행
-if st.session_state["last_auto_reset_date"] != last_reset_target.date():
-    init_databases(force=True)  # CSV 파일 내용 전체 초기화
-    st.session_state["last_auto_reset_date"] = last_reset_target.date()
-    st.toast("⏰ 오전 7시 정각 데이터 자동 초기화가 완료되었습니다.", icon="🔄")
 
 # --- [주소 분석 및 네비게이션 제어] ---
 qr_chem = st.query_params.get("chem", None)
@@ -116,101 +159,131 @@ active_sos = sos_df[sos_df["상태"] == "🚨 미조치 긴급상황"]
 if not active_sos.empty:
     st.markdown(f'<div class="siren-alert">⚠️ [종합방재실 비상 경보] 현재 공장 내에 조치되지 않은 SOS 긴급 상황이 발생했습니다! ({len(active_sos)}건 대기 중)</div>', unsafe_allow_html=True)
 
-# --- [⚙️ 권한 설정 레이어 고도화] ---
+# --- [⚙️ 측면 사이드바 시스템 권한 설정] ---
 st.sidebar.header("⚙️ 시스템 권한 설정")
-
 available_roles = ["👷 현장 작업자 모드"]
 if admin_bypass == "true":
     available_roles.append("🖥️ 종합 방재실(관리자) 모드")
 else:
-    st.sidebar.info("💡 관리자 관제 센터는 인가된 특수 단말기(보안 파라미터 포함 주소)로만 원격 진입이 가능합니다.")
-
+    st.sidebar.info("💡 관리자 관제 센터는 인가된 특수 단말기 주소로만 원격 진입이 가능합니다.")
 user_role = st.sidebar.selectbox("현재 접속 모드", available_roles)
 
 # =========================================================================
-# [권한 1] 현장 작업자 모드
+# [권한 1] 👷 현장 작업자 모드
 # =========================================================================
 if user_role == "👷 현장 작업자 모드":
-    st.title("🏭 스마트 안전관리 모바일 시스템")
     
-    st.markdown('<div class="sos-button">', unsafe_allow_html=True)
-    if st.button("🚨 긴급상황 발생 (SOS 신호 전송)"):
-        loc = get_geolocation()
-        lat = loc['coords']['latitude'] if loc else 35.5416
-        lon = loc['coords']['longitude'] if loc else 129.2555
+    # 상단 웅장한 대형 인트로 배너
+    st.markdown("""
+        <div class="main-title-banner">
+            <h1 style='color: white !important; margin:0; border:none; padding:0; font-size:32px;'>🏭 스마트 안전관리 모바일 시스템</h1>
+            <p style='margin: 8px 0 0 0; opacity: 0.9; font-size:16px;'>실시간 GPS 위치 관제 및 모바일 현장 QR 안전 점검 인프라</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 꽉 찬 화면 구성을 위한 좌/우 2분할 레이아웃 배치
+    col_left, col_right = st.columns([1, 2], gap="large")
+    
+    # --- [왼쪽 컬럼: 독점 긴급 구조 패널] ---
+    with col_left:
+        st.markdown('<div class="content-card">', unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top:0; color:#1e3a8a;'>🚨 긴급 구조 제어 센터</h3>", unsafe_allow_html=True)
+        st.write("현장 내 화재, 질식, 가스 유출 등 중대재해 발생 시 아래 버튼을 누르면 방재실 컴퓨터에 즉시 위치 경보가 사이렌과 함께 전송됩니다.")
         
-        now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
-        new_sos = pd.DataFrame([[now_str, lat, lon, "🚨 미조치 긴급상황"]], columns=SOS_COLS)
+        st.markdown('<div class="sos-container">', unsafe_allow_html=True)
+        if st.button("🚨 긴급상황 발생 (SOS 신호 즉시 전송)"):
+            loc = get_geolocation()
+            lat = loc['coords']['latitude'] if loc else 35.5416
+            lon = loc['coords']['longitude'] if loc else 129.2555
+            
+            now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
+            new_sos = pd.DataFrame([[now_str, lat, lon, "🚨 미조치 긴급상황"]], columns=SOS_COLS)
+            sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
+            pd.concat([sos_df, new_sos], ignore_index=True).to_csv(DB_SOS, index=False, encoding="utf-8-sig")
+            st.error("🚨 **[SOS 신호가 종합방재실 관제 센터로 즉시 송신되었습니다]**")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         
-        sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
-        pd.concat([sos_df, new_sos], ignore_index=True).to_csv(DB_SOS, index=False, encoding="utf-8-sig")
-        st.error("🚨 **[SOS 신호가 종합방재실 관제 센터로 즉시 송신되었습니다]**")
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.divider()
-    
-    menu_options = ["📍 실시간 위치 지침", "📚 화학물질 QR 자료실"]
-    selected_menu = st.radio("메뉴선택", menu_options, index=init_menu_idx, horizontal=True)
-    
-    st.write("") 
+        # 왼쪽 아래 공간 채우기용 안전 가이드 카드
+        st.markdown('<div class="content-card" style="margin-top:20px;">', unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-top:0; color:#475569;'>⚙️ 현장 작업 표준 지침</h4>", unsafe_allow_html=True)
+        st.caption("1. 작업 전 반드시 보호구(송기마스크, 내화학장갑)를 착용하십시오.")
+        st.caption("2. 가스 검지기의 정상 작동 여부를 선제적으로 체크하십시오.")
+        st.caption("3. QR 코드 인식 불가 시 화학물질 검색 창을 통해 수동 입력이 가능합니다.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    if selected_menu == "📍 실시간 위치 지침":
-        st.subheader("현재 내 위치 정보")
-        loc = get_geolocation()
-        if loc:
-            curr_lat, curr_lon = loc['coords']['latitude'], loc['coords']['longitude']
-            st.write(f"📍 현재 나의 좌표: **{curr_lat:.4f}, {curr_lon:.4f}**")
-            map_data = pd.DataFrame({'lat': [curr_lat], 'lon': [curr_lon]})
-            st.map(map_data, zoom=15)
-        else:
-            st.info("🔄 위치(GPS) 정보를 수집 중입니다...")
-            
-        st.subheader("📸 현장 점검용 카메라")
-        img_file = st.camera_input("카메라 구동")
-        if img_file: st.success("✨ 사진이 임시 저장되었습니다.")
+    # --- [오른쪽 컬럼: 메인 비즈니스 액션 패널] ---
+    with col_right:
+        st.markdown('<div class="content-card">', unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top:0; color:#1e3a8a;'>📱 현장 모바일 관제 시스템</h3>", unsafe_allow_html=True)
+        
+        # 대비감 높은 가시성 100% 탭형태 라디오 메뉴
+        menu_options = ["📍 실시간 내 위치 지침 모듈", "📚 화학물질 QR 안전 자료실"]
+        selected_menu = st.radio("메뉴선택", menu_options, index=init_menu_idx, horizontal=True)
+        
+        st.markdown("<hr style='margin-top:0; margin-bottom:25px; border:1px solid #cbd5e1;'>", unsafe_allow_html=True)
 
-    elif selected_menu == "📚 화학물질 QR 자료실":
-        st.subheader("📋 공장 취급 화학물질 정보")
-        chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
-        
-        default_index = 0
-        if qr_chem and qr_chem in CHEMICALS:
-            default_index = chem_list.index(qr_chem)
-            st.success(f"🔍 QR 코드가 성공적으로 인식되었습니다: **{CHEMICALS[qr_chem]['name']}**")
-            
-        selected_name = st.selectbox("🔍 화학물질 검색/선택", list(chem_options.keys()), index=default_index)
-        
-        if selected_name:
-            chem_key = chem_options[selected_name]
-            chem_data = CHEMICALS[chem_key]
-            
-            st.markdown(f"## **{chem_data['name']}**")
-            st.error(f"⚠️ **분류 및 기호:** {chem_data['symbol']}")
-            st.write(chem_data['danger'])
-            st.info(chem_data['emergency'])
-            
-            st.divider()
-            st.subheader("✍️ 현장 안전 점검 일지 제출")
-            with st.form("inspection_form", clear_on_submit=True):
-                inspector = st.text_input("👤 점검자 성명 (소속 포함)", placeholder="예: 공정1팀 김철수")
-                status = st.selectbox("📊 시설물 상태", ["정상 (이상 없음)", "주의 (정비 필요)", "위험 (즉시 조치 요망)"])
-                note = st.text_area("📝 특이사항")
-                submit_btn = st.form_submit_button("📁 점검 일지 시스템 전송")
+        # 서브 메뉴 1: 위치 지침 모듈
+        if selected_menu == "📍 실시간 내 위치 지침 모듈":
+            st.subheader("📍 현재 내 단말기 GPS 정보")
+            loc = get_geolocation()
+            if loc:
+                curr_lat, curr_lon = loc['coords']['latitude'], loc['coords']['longitude']
+                st.info(f"정밀 위경도 측정 완료: **위도 {curr_lat:.5f}, 경도 {curr_lon:.5f}**")
+                map_data = pd.DataFrame({'lat': [curr_lat], 'lon': [curr_lon]})
+                st.map(map_data, zoom=15)
+            else:
+                st.warning("🔄 위치 수집 서버와 통신 중이거나 단말기 GPS가 비활성화되어 가상 고정 좌표 지도를 렌더링합니다.")
+                map_data = pd.DataFrame({'lat': [35.5416], 'lon': [129.2555]})
+                st.map(map_data, zoom=14)
                 
-                if submit_btn and inspector:
-                    now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
-                    new_log = pd.DataFrame([[now_str, inspector, chem_data['name'], status, note]], columns=LOG_COLS)
-                    log_df = pd.read_csv(DB_LOG, encoding="utf-8-sig")
-                    pd.concat([log_df, new_log], ignore_index=True).to_csv(DB_LOG, index=False, encoding="utf-8-sig")
-                    st.success("📥 점검 결과가 종합방재실 서버 데이터베이스로 즉시 전송되었습니다!")
+            st.subheader("📸 현장 이상 부위 사진 촬영 공정 전송")
+            img_file = st.camera_input("스마트폰 카메라 구동")
+            if img_file: st.success("✨ 사진 데이터 인코딩 및 임시 버퍼 세이브 완료!")
+
+        # 서브 메뉴 2: 화학물질 자료실 모듈
+        elif selected_menu == "📚 화학물질 QR 안전 자료실":
+            st.subheader("📋 공장 취급 유해 화학물질 정보 명세")
+            chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
+            
+            default_index = 0
+            if qr_chem and qr_chem in CHEMICALS:
+                default_index = chem_list.index(qr_chem)
+                st.success(f"🔍 QR 스캔 링크 연동 성공: **{CHEMICALS[qr_chem]['name']}**")
+                
+            selected_name = st.selectbox("🔍 유해화학물질 셀렉트 박스", list(chem_options.keys()), index=default_index)
+            
+            if selected_name:
+                chem_key = chem_options[selected_name]
+                chem_data = CHEMICALS[chem_key]
+                
+                st.markdown(f"<div style='background-color:#f8fafc; padding:20px; border-radius:12px; border-left:6px solid #2563eb; margin-top:15px;'><h4>{chem_data['name']}</h4><p><b>CAS 번호:</b> {chem_data['cas_no']}</p></div>", unsafe_allow_html=True)
+                st.error(f"⚠️ **위험 분류 및 GHS 경고그림 기호:** {chem_data['symbol']}")
+                st.write(chem_data['danger'])
+                st.info(chem_data['emergency'])
+                
+                st.divider()
+                st.subheader("✍️ 스마트 공정 교대근무 일지 제출")
+                with st.form("inspection_form", clear_on_submit=True):
+                    inspector = st.text_input("👤 현장 검사 마스터 성명 (소속 포함)", placeholder="예: 공정팀 김철수")
+                    status = st.selectbox("📊 설비 및 가스 종합 상태 평가", ["정상 (이상 없음)", "주의 (예방 정비 필요)", "위험 (즉시 생산 셧다운 및 조치 요망)"])
+                    note = st.text_area("📝 설비 특이사항 및 점검 코멘트")
+                    submit_btn = st.form_submit_button("📁 점검 일지 원격 서버 전송")
+                    
+                    if submit_btn and inspector:
+                        now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
+                        new_log = pd.DataFrame([[now_str, inspector, chem_data['name'], status, note]], columns=LOG_COLS)
+                        log_df = pd.read_csv(DB_LOG, encoding="utf-8-sig")
+                        pd.concat([log_df, new_log], ignore_index=True).to_csv(DB_LOG, index=False, encoding="utf-8-sig")
+                        st.success("📥 데이터베이스 서버 연동 완결! 점검 일지가 성공적으로 등록되었습니다.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================================
-# [권한 2] 종합 방재실 관제 센터 모드 (⏱️ 세션 유지 및 🔄 수동 리셋 제어 패널)
+# [권한 2] 🖥️ 종합 방재실 관제 센터 모드
 # =========================================================================
 else:
-    st.title("🖥️ 종합 방재실 안전관제 대시보드")
+    st.title("🖥️ 종합 방재실 안전관제 최고 대시보드")
     
-    # 세션 시간 제어 초기화
     if "admin_authenticated" not in st.session_state:
         st.session_state["admin_authenticated"] = False
     if "login_time" not in st.session_state:
@@ -223,13 +296,13 @@ else:
         if elapsed_time > SESSION_TIMEOUT:
             st.session_state["admin_authenticated"] = False
             st.session_state["login_time"] = None
-            st.error("⏳ 보안 지침에 따라 관리자 세션이 만료되어 자동 로그아웃 및 리셋되었습니다. 다시 인증해 주세요.")
+            st.error("⏳ 보안 지침에 따라 관리자 세션이 만료되어 자동 로그아웃되었습니다. 다시 인증해 주세요.")
             time.sleep(1)
             st.rerun()
 
     if not st.session_state["admin_authenticated"]:
         st.warning("🔒 본 화면은 인가된 방재실 관리자만 접근할 수 있는 국가 중요 보안 시설 관제창입니다.")
-        st.info("⏱️ 본 관제 시스템은 최고 보안 등급 유지를 위해 [10분 후 자동 세션 리셋]이 작동합니다.")
+        st.info("⏱️ 최고 보안 등급 유지를 위해 관리자 화면은 [10분 후 자동 세션 로그아웃]이 작동합니다.")
         
         with st.form("admin_auth_form"):
             passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password")
@@ -249,16 +322,15 @@ else:
         minutes_left = int(time_left.total_seconds() // 60)
         seconds_left = int(time_left.total_seconds() % 60)
         
-        # 최상단 네비게이션 및 제어 레이아웃 구축
         col_status, col_reset, col_logout = st.columns([2, 1, 1])
         
         with col_status:
-            st.success(f"🟢 보안 리셋까지 남은 시간: {minutes_left}분 {seconds_left}초")
+            st.success(f"🟢 자동 로그아웃까지 남은 시간: {minutes_left}분 {seconds_left}초")
             
         with col_reset:
-            # 🔄 [수동 리셋 마스터 버튼 생성]
-            if st.button("🔄 전체 데이터 즉시 리셋", help="클릭 시 현장 점검 일지와 SOS 로그를 전부 비워 초기화합니다."):
-                init_databases(force=True)  # CSV 파일 강제 포맷
+            # 🔄 오직 관리자가 이 버튼을 직접 누를 때만 완벽히 리셋됩니다!
+            if st.button("🔄 전체 데이터 즉시 리셋"):
+                init_databases(force=True)
                 st.warning("데이터베이스가 수동 초기화되었습니다.")
                 time.sleep(1)
                 st.rerun()
@@ -271,31 +343,34 @@ else:
             
         st.divider()
         
-        st.subheader("🚨 실시간 SOS 비상 신고 접수 현황")
-        if active_sos.empty:
-            st.success("✅ 현재 접수된 비상 신고가 없습니다. 공장 내부 평온 상태 유지 중")
-        else:
-            st.warning(f"현재 {len(active_sos)}개의 비상 상황이 발생했습니다.")
-            sos_map_data = active_sos.rename(columns={"위치_위도": "lat", "위치_경도": "lon"})
-            st.map(sos_map_data, zoom=12)
-            
-            for index, row in active_sos.iterrows():
-                col_info, col_btn = st.columns([3, 1])
-                with col_info:
-                    st.write(f"⏰ **발생시간:** {row['일시']} | **좌표:** {row['위치_위도']:.4f}, {row['위치_경도']:.4f}")
-                with col_btn:
-                    if st.button("✅ 조치 완료", key=f"sos_{index}"):
-                        full_sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
-                        full_sos_df.at[index, "상태"] = "조치완료"
-                        full_sos_df.to_csv(DB_SOS, index=False, encoding="utf-8-sig")
-                        st.success("상황 조치 완료")
-                        st.rerun()
+        # 관제 모드 2분할 와이드 레이아웃 배치
+        adm_left, adm_right = st.columns([1, 1], gap="medium")
+        
+        with adm_left:
+            st.subheader("🚨 실시간 SOS 비상 신고 접수 현황")
+            if active_sos.empty:
+                st.success("✅ 현재 접수된 비상 신고가 없습니다. 공장 내부 평온 상태 유지 중")
+            else:
+                st.warning(f"현재 {len(active_sos)}개의 비상 상황이 발생했습니다.")
+                sos_map_data = active_sos.rename(columns={"위치_위도": "lat", "위치_경도": "lon"})
+                st.map(sos_map_data, zoom=12)
+                
+                for index, row in active_sos.iterrows():
+                    col_info, col_btn = st.columns([3, 1])
+                    with col_info:
+                        st.write(f"⏰ **발생시간:** {row['일시']} | **좌표:** {row['위치_위도']:.4f}, {row['위치_경도']:.4f}")
+                    with col_btn:
+                        if st.button("✅ 조치 완료", key=f"sos_{index}"):
+                            full_sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
+                            full_sos_df.at[index, "상태"] = "조치완료"
+                            full_sos_df.to_csv(DB_SOS, index=False, encoding="utf-8-sig")
+                            st.success("상황 조치 완료")
+                            st.rerun()
 
-        st.divider()
-
-        st.subheader("📋 현장 작업자 실시간 점검 기록 DB")
-        current_logs = pd.read_csv(DB_LOG, encoding="utf-8-sig")
-        if current_logs.empty:
-            st.info("아직 제출된 현장 안전 점검 일지가 없습니다. (오전 7시 초기화 완료 상태)")
-        else:
-            st.dataframe(current_logs.sort_values(by="일시", ascending=False), use_container_width=True)
+        with adm_right:
+            st.subheader("📋 현장 작업자 실시간 점검 기록 DB")
+            current_logs = pd.read_csv(DB_LOG, encoding="utf-8-sig")
+            if current_logs.empty:
+                st.info("아직 제출된 현장 안전 점검 일지가 없거나 초기화된 상태입니다.")
+            else:
+                st.dataframe(current_logs.sort_values(by="일시", ascending=False), use_container_width=True)
