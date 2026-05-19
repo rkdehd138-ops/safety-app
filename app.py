@@ -36,13 +36,14 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- [🔒 암호학 자격 증명 데이터 설정] ---
-# 비밀번호 'admin1234'를 SHA-256 방식으로 안전하게 해시화한 문자열 값입니다. (소스코드 해킹 방지)
+# 마스터 비밀번호 'admin1234'의 SHA-256 해시값입니다.
 ADMIN_PASSWORD_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
 
 def verify_password(input_password):
-    """입력받은 패스워드를 해시화하여 마스터 해시값과 비교 검증합니다."""
-    hashed_input = hashlib.sha256(input_password.encode()).hexdigest()
-    return hashed_input == ADMIN_PASSWORD_HASH
+    """입력받은 패스워드의 앞뒤 공백을 제거하고 해시화하여 마스터 해시값과 비교 검증합니다."""
+    # 사용자가 입력한 값의 앞뒤 공백을 .strip()으로 완벽하게 제거 후 해시화
+    hashed_input = hashlib.sha256(input_password.strip().encode()).hexdigest()
+    return hashed_input.strip() == ADMIN_PASSWORD_HASH.strip()
 
 # --- [화학물질 데이터베이스 (총 9종)] ---
 CHEMICALS = {
@@ -67,7 +68,7 @@ for f, cols in [(DB_LOG, ["일시", "점검자", "점검물질", "상태", "특�
 
 # --- [주소 분석 및 네비게이션 제어] ---
 qr_chem = st.query_params.get("chem", None)
-admin_bypass = st.query_params.get("admin", None) # 🕵️ 보안용 히든 주소 파라미터 수집
+admin_bypass = st.query_params.get("admin", None) 
 chem_list = list(CHEMICALS.keys())
 
 if isinstance(qr_chem, list) and len(qr_chem) > 0: qr_chem = qr_chem[0]
@@ -88,7 +89,6 @@ if not active_sos.empty:
 # --- [⚙️ 권한 설정 레이어 고도화] ---
 st.sidebar.header("⚙️ 시스템 권한 설정")
 
-# 주소창에 ?admin=true를 쳤을 때만 사이드바에 관리자 모드가 활성화되도록 은닉 기법 적용
 available_roles = ["👷 현장 작업자 모드"]
 if admin_bypass == "true":
     available_roles.append("🖥️ 종합 방재실(관리자) 모드")
@@ -175,19 +175,17 @@ if user_role == "👷 현장 작업자 모드":
                     st.success("📥 점검 결과가 종합방재실 서버 데이터베이스로 즉시 전송되었습니다!")
 
 # =========================================================================
-# [권한 2] 종합 방재실 관제 센터 모드 (🔒 SHA-256 2차 패스워드 방어 도입)
+# [권한 2] 종합 방재실 관제 센터 모드 (🔒 SHA-256 공공백 제거 디펜스 반영)
 # =========================================================================
 else:
     st.title("🖥️ 종합 방재실 안전관제 대시보드")
     
-    # 세션 상태 초기화 (비밀번호 인증 여부 확인 플래그)
     if "admin_authenticated" not in st.session_state:
         st.session_state["admin_authenticated"] = False
         
     if not st.session_state["admin_authenticated"]:
         st.warning("🔒 본 화면은 인가된 방재실 관리자만 접근할 수 있는 국가 중요 보안 시설 관제창입니다.")
         
-        # 폼 내부 비밀번호 입력
         with st.form("admin_auth_form"):
             passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password", help="SHA-256 보안 해시 레이어가 적용되어 보호됩니다.")
             auth_submit = st.form_submit_button("🔑 관제 센터 시스템 기동")
@@ -200,7 +198,6 @@ else:
                 else:
                     st.error("❌ 자격 증명 실패: 비밀번호가 일치하지 않거나 권한이 거부되었습니다.")
                     
-    # 비밀번호 검증을 완벽하게 통과한 경우에만 아래 실제 데이터 대시보드를 렌더링
     else:
         st.success("🟢 통제 권한 인증 상태: 방재실 최고 관리자 자격 활성화됨")
         if st.button("🔒 안전 로그아웃"):
@@ -209,7 +206,6 @@ else:
             
         st.divider()
         
-        # 1. 실시간 SOS 상황판
         st.subheader("🚨 실시간 SOS 비상 신고 접수 현황")
         if active_sos.empty:
             st.success("✅ 현재 접수된 비상 신고가 없습니다. 공장 내부 평온 상태 유지 중")
@@ -232,7 +228,6 @@ else:
 
         st.divider()
 
-        # 2. 실시간 현장 점검 로그 모니터링
         st.subheader("📋 현장 작업자 실시간 점검 기록 DB")
         current_logs = pd.read_csv(DB_LOG, encoding="utf-8-sig")
         if current_logs.empty:
