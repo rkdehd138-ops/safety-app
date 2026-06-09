@@ -49,6 +49,11 @@ div[data-testid="stRadio"] label[data-checked="true"] {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important; color:#fff !important; border-color:#1d4ed8 !important;
   box-shadow: 0 4px 12px rgba(37,99,235,.3) !important;
 }
+.badge {
+  display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700;
+  background:#e2e8f0; color:#334155; border:1px solid #cbd5e1; margin-bottom:8px;
+}
+.badge.primary { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -57,25 +62,18 @@ ADMIN_PASSWORD_PLAIN = "admin1234"
 def verify_password(input_password: str) -> bool:
     return input_password.strip() == ADMIN_PASSWORD_PLAIN.strip()
 
-# --- 기본 공장 좌표(A공장): 사용자 스크린샷 근방 값 ---
+# --- 기본 공장 좌표(A공장): 스크린샷 근방 값 ---
 A_FACTORY_LAT = 35.406982
 A_FACTORY_LON = 129.283630
 
 def jitter_around_factory(max_radius_m: float = 1000.0):
-    # 반지름 0~max 사이 무작위, 각도 무작위 → 위경도 오프셋
-    r = random.random() ** 0.5 * max_radius_m  # 가장자리 과밀 방지
+    r = random.random() ** 0.5 * max_radius_m
     theta = random.random() * 2 * math.pi
-    # 위도/경도 1m당 변화량 근사
     dlat = r / 111_320.0
     dlon = r / (111_320.0 * math.cos(math.radians(A_FACTORY_LAT)))
     return A_FACTORY_LAT + dlat * math.cos(theta), A_FACTORY_LON + dlon * math.sin(theta)
 
 def get_safe_location():
-    """
-    위치 권한 거부/오류 시에도 항상 (lat, lon, used_default) 반환.
-    - 성공: 단말기 좌표
-    - 실패: A공장 근방(±1km) 좌표
-    """
     lat = None; lon = None
     try:
         loc = get_geolocation()
@@ -90,7 +88,7 @@ def get_safe_location():
         return lat, lon, True
     return lat, lon, False
 
-# --- 화학물질 DB (생략 없이 유지) ---
+# --- 화학물질 DB ---
 CHEMICALS = {
     "TOLUENE":{"name":"톨루엔 (Toluene)","cas_no":"108-88-3","symbol":"🔥 고인화성 / ⚠️ 급성·만성독성 / 🎗️ 생식독성",
                "danger":"• 고인화성 액체 및 증기...\n• 흡입 시 중추신경계 억제...\n• 장기 노출 시 태아 손상...",
@@ -205,12 +203,20 @@ if user_role == "👷 현장 작업자 모드":
         st.markdown('<div class="content-card">', unsafe_allow_html=True)
         st.markdown("<h3 style='margin-top:0;color:#1e3a8a;'>📱 현장 모바일 관제 시스템</h3>", unsafe_allow_html=True)
 
-        menu_options = ["📍 실시간 내 위치 지침 모듈", "📚 화학물질 QR 안전 자료실"]
-        st.caption("원하는 기능을 선택하세요.")
-        selected_menu = st.radio("메뉴선택", menu_options, index=init_menu_idx, horizontal=True)
-        st.markdown("<hr style='margin-top:0;margin-bottom:25px;border:1px solid #cbd5e1;'>", unsafe_allow_html=True)
+        # 라디오 메뉴 라벨을 명확하게: 메인(지도) / 자료실
+        menu_options = ["🗺️ 메인 — 실시간 지도/위치", "📚 자료실 — 화학물질 QR/MSDS"]
+        st.caption("메뉴 안내: 메인은 현재 단말기 위치 지도를 보여주고, 자료실은 QR·MSDS 정보를 확인합니다.")
+        selected_menu = st.radio("기능 선택", menu_options, index=init_menu_idx, horizontal=True)
 
-        if selected_menu == "📍 실시간 내 위치 지침 모듈":
+        # 현재 선택 배지
+        if selected_menu.startswith("🗺️"):
+            st.markdown('<span class="badge primary">현재 모듈: 메인(지도)</span>', unsafe_allow_html=True)
+        else:
+            st.markdown('<span class="badge">현재 모듈: 자료실</span>', unsafe_allow_html=True)
+
+        st.markdown("<hr style='margin-top:8px;margin-bottom:25px;border:1px solid #cbd5e1;'>", unsafe_allow_html=True)
+
+        if selected_menu.startswith("🗺️"):  # 메인 — 지도
             st.subheader("📍 현재 좌표")
             lat, lon, used_default = get_safe_location()
             if used_default:
@@ -231,7 +237,7 @@ if user_role == "👷 현장 작업자 모드":
                     filename = f"{ts}.jpg"
                     save_path = os.path.join(PHOTO_DIR, filename)
                     img.save(save_path, format="JPEG", quality=90)
-                    plat, plon, _ = get_safe_location()  # 사진 메타 좌표도 안전 획득
+                    plat, plon, _ = get_safe_location()
                     now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
                     photo_df = pd.read_csv(DB_PHOTO, encoding="utf-8-sig")
                     new_photo = pd.DataFrame([[now_str, plat, plon, filename]], columns=PHOTO_COLS)
@@ -242,7 +248,7 @@ if user_role == "👷 현장 작업자 모드":
             else:
                 st.caption("카메라 권한이 없거나 촬영을 취소한 경우에도 오류 없이 건너뜁니다.")
 
-        else:  # 📚 화학물질 QR 안전 자료실
+        else:  # 자료실 — 화학물질
             st.subheader("📋 공장 취급 유해 화학물질 정보 명세")
             chem_options = {info["name"]: key for key, info in CHEMICALS.items()}
             default_index = chem_list.index(qr_chem) if (qr_chem and qr_chem in CHEMICALS) else 0
