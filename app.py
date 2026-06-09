@@ -185,6 +185,21 @@ active_sos = sos_df[sos_df["상태"] == "🚨 미조치 긴급상황"]
 if not active_sos.empty:
     st.markdown(f'<div class="siren-alert">⚠️ [종합방재실 비상 경보] 현재 공장 내에 조치되지 않은 SOS 긴급 상황이 발생했습니다! ({len(active_sos)}건 대기 중)</div>', unsafe_allow_html=True)
 
+# --- [상단 빈 영역에 기본 문구 채움] ---
+with st.container():
+    st.markdown("""
+        <div class="content-card">
+            <strong>안내</strong> · 상단 공지 및 요약 정보가 이 영역에 표시됩니다. 현재 표시할 공지는 없습니다.
+        </div>
+    """, unsafe_allow_html=True)
+
+with st.container():
+    st.markdown("""
+        <div class="content-card">
+            <strong>안내</strong> · 시스템 사용 팁과 QR 연동 도움말이 이 영역에 표시됩니다. 필요 시 관리자에 문의하세요.
+        </div>
+    """, unsafe_allow_html=True)
+
 # --- [⚙️ 측면 사이드바 시스템 권한 설정] ---
 st.sidebar.header("⚙️ 시스템 권한 설정")
 available_roles = ["👷 현장 작업자 모드"]
@@ -221,7 +236,9 @@ if user_role == "👷 현장 작업자 모드":
             new_sos = pd.DataFrame([[now_str, lat, lon, "🚨 미조치 긴급상황"]], columns=SOS_COLS)
             sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
             pd.concat([sos_df, new_sos], ignore_index=True).to_csv(DB_SOS, index=False, encoding="utf-8-sig")
-            st.error("🚨 **[SOS 신호가 종합방재실 관제 센터로 즉시 송신되었습니다]**")
+            st.error("🚨 [SOS 신호가 종합방재실 관제 센터로 즉시 송신되었습니다]")
+        else:
+            st.caption("버튼을 누르면 현재 기기의 GPS 좌표가 함께 전송됩니다.")
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -237,6 +254,7 @@ if user_role == "👷 현장 작업자 모드":
         st.markdown("<h3 style='margin-top:0; color:#1e3a8a;'>📱 현장 모바일 관제 시스템</h3>", unsafe_allow_html=True)
         
         menu_options = ["📍 실시간 내 위치 지침 모듈", "📚 화학물질 QR 안전 자료실"]
+        st.caption("원하는 기능을 선택하세요.")
         selected_menu = st.radio("메뉴선택", menu_options, index=init_menu_idx, horizontal=True)
         st.markdown("<hr style='margin-top:0; margin-bottom:25px; border:1px solid #cbd5e1;'>", unsafe_allow_html=True)
 
@@ -245,13 +263,17 @@ if user_role == "👷 현장 작업자 모드":
             loc = get_geolocation()
             if loc:
                 curr_lat, curr_lon = loc['coords']['latitude'], loc['coords']['longitude']
-                st.info(f"정밀 위경도 측정 완료: **위도 {curr_lat:.5f}, 경도 {curr_lon:.5f}**")
+                st.info(f"정밀 위경도 측정 완료: 위도 {curr_lat:.5f}, 경도 {curr_lon:.5f}")
                 st.map(pd.DataFrame({'lat': [curr_lat], 'lon': [curr_lon]}), zoom=15)
             else:
                 st.warning("🔄 위치 수집 서버와 통신 중이거나 단말기 GPS가 비활성화되어 가상 고정 좌표 지도를 렌더링합니다.")
                 st.map(pd.DataFrame({'lat': [35.5416], 'lon': [129.2555]}), zoom=14)
             st.subheader("📸 현장 이상 부위 사진 촬영 공정 전송")
-            if st.camera_input("스마트폰 카메라 구동"): st.success("✨ 사진 데이터 인코딩 및 임시 버퍼 세이브 완료!")
+            cam = st.camera_input("스마트폰 카메라 구동")
+            if cam:
+                st.success("✨ 사진 데이터 인코딩 및 임시 버퍼 세이브 완료!")
+            else:
+                st.caption("사진 촬영이 필요 없으면 이 단계를 건너뛸 수 있습니다.")
 # 서브 메뉴 2: 화학물질 자료실 모듈
         elif selected_menu == "📚 화학물질 QR 안전 자료실":
             st.subheader("📋 공장 취급 유해 화학물질 정보 명세")
@@ -260,9 +282,11 @@ if user_role == "👷 현장 작업자 모드":
             default_index = 0
             if qr_chem and qr_chem in CHEMICALS:
                 default_index = chem_list.index(qr_chem)
-                st.success(f"🔍 QR 스캔 링크 연동 성공: **{CHEMICALS[qr_chem]['name']}**")
+                st.success(f"🔍 QR 스캔 링크 연동 성공: {CHEMICALS[qr_chem]['name']}")
+            else:
+                st.caption("QR로 진입하지 않은 경우 목록에서 물질을 직접 선택하세요.")
                 
-            selected_name = st.selectbox("🔍 유해화학물질 셀렉트 박스", list(chem_options.keys()), index=default_index)
+            selected_name = st.selectbox("🔍 유해화학물질 선택", list(chem_options.keys()), index=default_index, placeholder="물질을 선택하면 상세 정보가 표시됩니다.")
             
             if selected_name:
                 chem_key = chem_options[selected_name]
@@ -270,7 +294,7 @@ if user_role == "👷 현장 작업자 모드":
                 
                 # [상세 정보 출력부: 가독성을 위해 expander 적용]
                 st.markdown(f"### 🧪 {chem_data['name']}")
-                st.error(f"**위험 기호:** {chem_data['symbol']}")
+                st.error(f"위험 기호: {chem_data['symbol']}")
                 
                 with st.expander("🚨 자세한 위험성 (Danger)", expanded=True):
                     st.write(chem_data['danger'])
@@ -283,7 +307,7 @@ if user_role == "👷 현장 작업자 모드":
                 with st.form("inspection_form", clear_on_submit=True):
                     inspector = st.text_input("👤 현장 검사 마스터 성명 (소속 포함)", placeholder="예: 공정팀 김철수")
                     status = st.selectbox("📊 설비 및 가스 종합 상태 평가", ["정상 (이상 없음)", "주의 (예방 정비 필요)", "위험 (즉시 생산 셧다운 및 조치 요망)"])
-                    note = st.text_area("📝 설비 특이사항 및 점검 코멘트")
+                    note = st.text_area("📝 설비 특이사항 및 점검 코멘트", placeholder="현장 상태, 이상 징후, 즉시 조치 사항 등을 자세히 입력하세요.")
                     submit_btn = st.form_submit_button("📁 점검 일지 원격 서버 전송")
                     
                     if submit_btn and inspector:
@@ -292,6 +316,10 @@ if user_role == "👷 현장 작업자 모드":
                         log_df = pd.read_csv(DB_LOG, encoding="utf-8-sig")
                         pd.concat([log_df, new_log], ignore_index=True).to_csv(DB_LOG, index=False, encoding="utf-8-sig")
                         st.success("📥 데이터베이스 서버 연동 완결! 점검 일지가 성공적으로 등록되었습니다.")
+                    elif submit_btn and not inspector:
+                        st.error("성명을 입력해야 전송됩니다.")
+            else:
+                st.info("상단의 선택 박스에서 물질을 선택하면 위험성·응급조치 정보가 여기 표시됩니다.")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================================
@@ -318,10 +346,10 @@ else:
 
     if not st.session_state["admin_authenticated"]:
         st.warning("🔒 본 화면은 인가된 방재실 관리자만 접근할 수 있는 국가 중요 보안 시설 관제창입니다.")
-        st.info("⏱️ 최고 보안 등급 유지를 위해 관리자 화면은 [10분 후 자동 세션 로그아웃]이 작동합니다.")
+        st.info("⏱️ 최고 보안 등급 유지를 위해 관리자 화면은 10분 후 자동 세션 로그아웃이 작동합니다.")
         
         with st.form("admin_auth_form"):
-            passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password")
+            passwd_input = st.text_input("🛡️ 방재실 마스터 통제 패스워드 입력", type="password", placeholder="관리자 비밀번호를 입력하세요.")
             auth_submit = st.form_submit_button("🔑 관제 센터 시스템 기동")
             
             if auth_submit:
@@ -341,7 +369,7 @@ else:
         col_status, col_reset, col_logout = st.columns([2, 1, 1])
         
         with col_status:
-            st.success(f"🟢 자동 로그아웃까지 남은 시간: {minutes_left}분 {seconds_left}초")
+            st.success(f"🟢 자동 로그아웃까지 남은 시간: {minutes_left}분 {seconds_left}초 (보안 이유로 새로고침 시 갱신)")
             
         with col_reset:
             if st.button("🔄 전체 데이터 즉시 리셋"):
@@ -364,6 +392,7 @@ else:
             st.subheader("🚨 실시간 SOS 비상 신고 접수 현황")
             if active_sos.empty:
                 st.success("✅ 현재 접수된 비상 신고가 없습니다. 공장 내부 평온 상태 유지 중")
+                st.caption("비상 상황이 접수되면 위치 좌표와 발생 시간이 여기에 표시됩니다.")
             else:
                 st.warning(f"현재 {len(active_sos)}개의 비상 상황이 발생했습니다.")
                 sos_map_data = active_sos.rename(columns={"위치_위도": "lat", "위치_경도": "lon"})
@@ -372,7 +401,7 @@ else:
                 for index, row in active_sos.iterrows():
                     col_info, col_btn = st.columns([3, 1])
                     with col_info:
-                        st.write(f"⏰ **발생시간:** {row['일시']} | **좌표:** {row['위치_위도']:.4f}, {row['위치_경도']:.4f}")
+                        st.write(f"⏰ 발생시간: {row['일시']} | 좌표: {row['위치_위도']:.4f}, {row['위치_경도']:.4f}")
                     with col_btn:
                         if st.button("✅ 조치 완료", key=f"sos_{index}"):
                             full_sos_df = pd.read_csv(DB_SOS, encoding="utf-8-sig")
@@ -386,5 +415,6 @@ else:
             current_logs = pd.read_csv(DB_LOG, encoding="utf-8-sig")
             if current_logs.empty:
                 st.info("아직 제출된 현장 안전 점검 일지가 없거나 초기화된 상태입니다.")
+                st.caption("현장에서 점검이 등록되면 최신 항목이 목록 상단에 표시됩니다.")
             else:
                 st.dataframe(current_logs.sort_values(by="일시", ascending=False), use_container_width=True)
